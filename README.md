@@ -1,9 +1,13 @@
 # OnlyVoiceOctober: Bolna Buildathon
 
-**Current recommendation: PagerCall**, the AI on-call engineer you talk to. It investigates a production alert before your phone rings, briefs you in 20 seconds, and rolls back, scales or flips flags when you approve by voice (risky actions need a keypad PIN).
+## 🔒 We're building **ChurnCall**
+The AI that calls your churned users and tells you why they left. When a SaaS user cancels, downgrades or goes quiet, ChurnCall invites them to a 4-minute voice conversation (one tap in the browser, or a phone call when they ask for one). An AI interviewer runs a research-grade conversation with real follow-up questions, then turns every call into churn themes weighted by revenue at risk. Each theme comes with verbatim quotes and audio clips, alerts about users who can be won back, and Linear tickets.
 
-- PagerCall decision + build doc + 2-person plan: [docs/PAGERCALL.md](docs/PAGERCALL.md)
-- Earlier candidates: [CareCall + Kavach](docs/DECISION.md) ([build plan](docs/BUILD_PLAN.md)), [FieldLog / Munshi](docs/FIELDLOG.md)
-- Idea research: [docs/research/](docs/research/)
+- **Spec, architecture, evals and 2-person plan:** [docs/CHURNCALL.md](docs/CHURNCALL.md)
+- Pilot log: `docs/pilot-log.md` (starts with the first interviews)
 
-Status: planning, awaiting approval before execution.
+## Decision history (kept for reference)
+CareCall + Kavach ([decision](docs/DECISION.md), [build plan](docs/BUILD_PLAN.md)) → [FieldLog](docs/FIELDLOG.md) → [PagerCall](docs/PAGERCALL.md) → **ChurnCall**. Idea research: [docs/research/](docs/research/).
+
+## Key dates
+Kill test go/no-go **Oct 21** · submit **Oct 30** (deadline Oct 31) · finale **Nov 20**.
