@@ -267,6 +267,12 @@ docs/         this doc + history + pilot-log.md
 | **Funnel** | Invite → open → start → complete, per channel | ≥ 15% of invited complete *(go/no-go, §8.1)* |
 | **Latency** | End of user speech → agent audio | p50 ≤ 1.2 s |
 
+**Added from the open-source landscape:**
+- **Transcript reliability gate:** before verifying quotes, flag likely speech-to-text inventions (low-confidence spans, phrases repeated in silence, text that doesn't fit the context) and drop or re-transcribe those spans.
+- **Evidence binding everywhere:** every field on an insight card and every sentence in a summary links to its source transcript turn and timestamp.
+- **Synthetic end-to-end calls:** a nightly run where a scripted "churned user" line calls the interviewer, with assertions on coverage, schema and timing, and differences against the last run flagged in CI.
+- **Honest funnel:** invited → reached → refused → unreached → completed. Silence is never consent.
+
 The evals run in CI on every prompt or guide change. **Publishing our interview-quality benchmark** ("how good are AI interviewers?") is also a great launch and credibility asset.
 
 ---
@@ -299,6 +305,24 @@ The evals run in CI on every prompt or guide change. **Publishing our interview-
 | AI interview platforms (text/video) | Listen Labs, Outset and others [verify current players] | Built for scheduled research studies with recruited panels. Need a link, a camera and effort. Not triggered by churn or tied to revenue. |
 | Product analytics | PostHog, Mixpanel, Amplitude | Shows *what* users did, never *why* |
 | Win-loss services | Clozd, consultants | Expensive, human, slow, enterprise-only |
+
+### Open-source landscape: [awesome-phone-call-agents](https://github.com/CALLE-AI/awesome-phone-call-agents) (read in full, 2026-10-18)
+- **Nobody is doing real churn interviews.** The closest items:
+  - *Churn-Rescue AI*: a browser simulation with no verified outcomes
+  - *recover*: calls when a card payment fails, to get a retry, card update or pause. That's a dunning flow, not a "why".
+  - *Tokito*: phones people who ignored a Google Form
+  - *researchcall-survey*: fixed-script surveys
+  
+  These validate the demand and leave our gap open: adaptive interviews + revenue-weighted synthesis.
+- **Patterns we'll adopt** (see §6):
+  - **evidence binding**: every insight field links to the transcript turn behind it (from *relaygoal*, *asheard*, *callproof*)
+  - **transcript reliability gate**: catch words the speech-to-text made up before we verify quotes
+  - **synthetic test calls** run in CI (from *linecanary*, *otherend*)
+  - **funnel honesty**: count answered, refused and unreached separately against everyone invited, and never treat silence as consent (from *ringedingeding*, *researchcall-survey*)
+  - **consent gates**: call windows, do-not-contact list, attempt caps, tamper-evident audit log (from *callguardian*)
+  - **read-back before acting** (from *one-more-story*, *verity*)
+  - a pitch line against pushy retention tactics (from *call-cancellation-respect-auditor*)
+- **Avoid:** recruiting screens (*hirecall*, *openline-screening*). That space is crowded.
 
 **Our position:** event-triggered, voice-first, revenue-weighted, and closing the loop (win-back + tickets). We're the **"why" layer next to your analytics.**
 
