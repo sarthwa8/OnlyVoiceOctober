@@ -1,6 +1,7 @@
 # ChurnCall: the AI that calls your churned users and tells you why they left
 
 > v1.0 · 2026-10-18 · Team of **2** · Status: **🔒 LOCKED: this is what we're building**
+> Evidence base (sources + reliability): [research/churncall-evidence.md](research/churncall-evidence.md)
 > Decision history: [CareCall](DECISION.md) → [FieldLog](FIELDLOG.md) → [PagerCall](PAGERCALL.md) → **ChurnCall**. Earlier docs are kept for reference.
 > **[verify]** = confirm in Bolna or vendor docs, or with a real test, before relying on it. Numbers marked *(est.)* are assumptions to validate with pilots.
 
