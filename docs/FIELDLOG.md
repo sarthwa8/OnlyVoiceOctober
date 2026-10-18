@@ -1,5 +1,7 @@
 # FieldLog (working name: *Munshi*): the AI site record-keeper that works by phone call
 
+> ⚠️ **Not chosen (2026-10-18):** the locked build is **[CHURNCALL.md](CHURNCALL.md)**. This doc is kept for reference.
+
 > v0.1 · 2026-10-18 · Team of **2** · Status: **candidate, compared with CareCall in §12**
 > Earlier concept: [research/ideas-bank.md #13](research/ideas-bank.md) · Shared build stack: [BUILD_PLAN.md](BUILD_PLAN.md)
 > Items marked **[verify]** need checking against Bolna docs or real users. ₹ figures marked *(est.)* are assumptions to confirm in customer interviews.
