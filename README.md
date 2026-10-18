@@ -4,6 +4,7 @@
 
 - Decision & reasoning: [docs/DECISION.md](docs/DECISION.md)
 - Build document & execution plan: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md)
+- Alternative candidate, FieldLog / Munshi (voice site reporting for construction): [docs/FIELDLOG.md](docs/FIELDLOG.md)
 - Idea research: [docs/research/](docs/research/)
 
 Status: planning, awaiting approval before execution.
