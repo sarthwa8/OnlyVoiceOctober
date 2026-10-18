@@ -1,0 +1,17 @@
+{
+  "_comment": "Bolna agent settings for the ChurnCall interviewer. Field names marked VERIFY must be checked against Bolna's agent API docs before syncing; they are our intended settings, not confirmed schema.",
+  "agent_name": "churncall-interviewer-v1",
+  "agent_welcome_message": "Hi {contact_name}, I'm an AI assistant calling on behalf of {founder_name} at {company_name}.",
+  "language": "en",
+  "llm": {"provider": "VERIFY", "model": "VERIFY", "temperature_note": "keep low; short turns"},
+  "transcriber": {"provider": "deepgram", "language": "en", "VERIFY_keywords": ["{company_name}"]},
+  "synthesizer": {"provider": "VERIFY (cartesia or elevenlabs)", "voice": "warm, unhurried"},
+  "turn_taking": {
+    "VERIFY_endpointing_ms": 900,
+    "interruptions_enabled": true,
+    "VERIFY_silence_reprompt_s": 8,
+    "VERIFY_hangup_after_silence_s": 20
+  },
+  "max_call_duration_s": 360,
+  "post_call": {"webhook_url": "https://<api-host>/bolna/webhook", "send_transcript": true, "send_recording": true}
+}
