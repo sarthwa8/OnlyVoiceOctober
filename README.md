@@ -1,10 +1,9 @@
 # OnlyVoiceOctober: Bolna Buildathon
 
-**CareCall + Kavach**: one phone number that looks after ageing parents. It makes daily check-in calls in their language (medicines, mood, symptoms, companionship) and can be merged into a suspicious call to stop scams live.
+**Current recommendation: PagerCall**, the AI on-call engineer you talk to. It investigates a production alert before your phone rings, briefs you in 20 seconds, and rolls back, scales or flips flags when you approve by voice (risky actions need a keypad PIN).
 
-- Decision & reasoning: [docs/DECISION.md](docs/DECISION.md)
-- Build document & execution plan: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md)
-- Alternative candidate, FieldLog / Munshi (voice site reporting for construction): [docs/FIELDLOG.md](docs/FIELDLOG.md)
+- PagerCall decision + build doc + 2-person plan: [docs/PAGERCALL.md](docs/PAGERCALL.md)
+- Earlier candidates: [CareCall + Kavach](docs/DECISION.md) ([build plan](docs/BUILD_PLAN.md)), [FieldLog / Munshi](docs/FIELDLOG.md)
 - Idea research: [docs/research/](docs/research/)
 
 Status: planning, awaiting approval before execution.

@@ -1,5 +1,7 @@
 # Decision: what we build for the Bolna Buildathon
 
+> ⚠️ **Superseded (2026-10-18):** the brief changed to a tech-industry, B2B, venture-scale product. The current recommendation is **[PAGERCALL.md](PAGERCALL.md)**. This doc is kept for reference.
+
 > 2026-10-18 · Status: **awaiting approval** · Research inputs: [docs/research/](research/)
 > Deadline: submit by **Oct 31** · Shortlist Nov 3 · Interviews Nov 5–7 · Finale (top 3, YC interview prize) **Nov 20**
 
