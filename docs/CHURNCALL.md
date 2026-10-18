@@ -303,7 +303,8 @@ The evals run in CI on every prompt or guide change. **Publishing our interview-
 | Category | Examples | Their gap |
 |---|---|---|
 | Exit surveys / cancellation flows | Churnkey, ProfitWell Retain, Typeform | Checkboxes and discounts. Shallow "why", no follow-ups. |
-| AI interview platforms (text/video) | Listen Labs, Outset and others [verify current players] | Built for scheduled research studies with recruited panels. Need a link, a camera and effort. Not triggered by churn or tied to revenue. |
+| **AI churn interviews (direct)** | **Koji** (text + voice, €29–79/month), **Perspective AI** (voice/chat/phone, $4M seed) | Already doing it. Our angle must be event-triggered + revenue-weighted + India phone-first + closing the loop (see the evidence doc) |
+| AI interview platforms (text/video) | Listen Labs, Outset and others | Built for scheduled research studies with recruited panels. Need a link, a camera and effort. Not triggered by churn or tied to revenue. |
 | Product analytics | PostHog, Mixpanel, Amplitude | Shows *what* users did, never *why* |
 | Win-loss services | Clozd, consultants | Expensive, human, slow, enterprise-only |
 
@@ -332,6 +333,13 @@ The evals run in CI on every prompt or guide change. **Publishing our interview-
 ## 8. Execution plan (team of 2, Oct 18 → Oct 31 → Nov 20)
 
 ### 8.1 The 48-hour kill test (Sat Oct 18 – Mon Oct 20)
+
+> **Updated after competitor check** ([evidence §6–7](research/churncall-evidence.md)): Koji and Perspective AI already run AI voice churn interviews, and Koji charges about €29–79/month. So the kill test must answer **three** questions, not one:
+> 1. **Will they talk?** Completion rate split by channel (browser vs phone) and by incentive (none vs $5). Use invite variants: A/B test the founder's personal email against a generic one.
+> 2. **Is it better?** Show founders our insights *next to* their exit-survey data and a Koji-style text interview (run a free Koji trial on 10 users if possible). Ask "which would you act on?"
+> 3. **Will they pay more than Koji?** Ask pilot founders: what would you pay for Stripe-triggered, revenue-weighted interviews with win-back routing? If the answer is ≤ €79/month, consider the **win-loss** pivot (same engine, much higher price per interview) or the **India phone-first** angle.
+>
+> Go needs ✅ on 1 *and* (2 or 3).
 - Before building much, **ask 3–5 startups** (from our freelance and GTM network) to lend us **50–100 churned or trial-dropped users** each, through CSV export.
 - Build a minimal version: invite email → landing page → Bolna web call / "call me" → transcript.
 - **Go/no-go on Tue Oct 21 evening:**

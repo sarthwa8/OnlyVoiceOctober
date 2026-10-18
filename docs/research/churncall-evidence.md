@@ -43,11 +43,36 @@
 
 **Implication:** browser voice plus calls the user asks for is a requirement, not just good UX.
 
-## 6. ⚠️ Competitors found during this research (new)
-- **Koji** (koji.so) and **Perspective AI** (getperspective.ai) market AI interviews for churn and exit intent. **We need to look at them closely on Day 1:** channel (text or voice?), whether interviews are triggered by events, pricing.
-- **What could still set us apart:** voice and phone (not a chat widget), weighting by revenue from Stripe, Indian-language support, and closing the loop with win-back and tickets. Claim none of this until we've verified what they actually do.
+## 6. ⚠️ Competitors: checked 2026-10-18 (they already do voice churn interviews)
+| | **Koji** (koji.so) | **Perspective AI** (getperspective.ai) |
+|---|---|---|
+| What it is | An AI interviewer that runs adaptive interviews, with churn interviews and pricing research as named use cases | An "independent AI interviewer" for customer conversations, positioned on retention and customer success (CEO is a former CS executive) |
+| Channel | **Text and voice** (a voice interview costs 3 credits, text 1) | **Voice or chat across web, email, SMS, Slack, WhatsApp and phone**. Claims 57 auto-detected voice languages. |
+| When it triggers | Interviews churned users "within 2 weeks" of cancelling (manual or campaign-based, not clearly event-triggered) | A blog post describes a short AI conversation **inside the cancellation flow** that routes savable users to an offer |
+| Integrations | Not confirmed | Salesforce, HubSpot, Slack |
+| Price | **€29/month (29 credits) and €79/month (79 credits)**, free tier of 10 credits, €1 per extra credit | Free start, no annual contract; tiers not found |
+| Funding | Not found | **$4M seed** (Jan 2025: Village Global, Array and others) |
+| Sources | [plans](https://www.koji.so/docs/plan-comparison-guide), [SaaS use case](https://www.koji.so/docs/ai-research-for-saas) | [BusinessWire](https://www.businesswire.com/news/home/20250130668368/en/Perspective-AI-Emerges-from-Stealth-to-Deliver-Customer-Truths), [exit-survey blog](https://getperspective.ai/blog/how-to-find-out-why-customers-cancel-2026-replacing-the-exit-survey) |
 
-## 7. What the evidence does NOT prove (be honest in the pitch)
+All of this is from their own sites (🟡). Perspective's comparison page also claims **Salesforce agreed to acquire Listen Labs** (closing early 2027). 🔴 Unverified, but if true it shows big companies want this category.
+
+**What this means, honestly:**
+- "AI voice churn interviews" is **not a gap**. Two funded or live products already do it, and Koji's price is low (about €1 per interview for text, €3 for voice). We can't win on "we do voice churn interviews".
+- **Where we could still be different** (to test, not to assume):
+  1. **Phone-first in India and Hinglish.** Indian consumer subscription and SaaS users, Bolna's home turf. Neither competitor shows India focus.
+  2. **Event-triggered and revenue-weighted.** Stripe cancellation → interview within minutes → themes weighted by MRR at risk. Koji is campaign-based; Perspective's revenue weighting isn't clear.
+  3. **Closing the loop.** Live transfer to the founder for users who can be won back, and tickets with evidence attached.
+  4. **Research-grade trust.** Every insight tied to a verbatim quote, plus published interview-quality evals.
+- **Or move up-market inside the same engine: win-loss interviews.** Clozd (human-run) raised $52M, which suggests B2B sales teams pay far more per interview than SaaS teams pay Koji. That's a better business if churn turns into a price war.
+
+## 7. Benchmarks for the kill test
+- **Voluntary customer interviews:** 30–40% participation is considered "quite successful" ([Clozd](https://www.clozd.com/blog/how-to-drive-higher-response-rates-for-customer-interviews), vendor, all customers not just churned). Expect churned users to be well below that.
+- **Timing matters:** reaching out soon after churn raises response ([Clozd](https://www.clozd.com/blog/the-ultimate-guide-to-customer-outreach-engaging-churned-customers)). Invite by **email**, since churned users may no longer log in.
+- **Incentives:** in government household surveys, incentives raised response by about 5 percentage points ([BLS](https://www.bls.gov/cex/research_papers/pdf/incentives-in-the-ce-interview-survey-present-findings-and-future-research.pdf)).
+- **Exit-survey baseline:** vendors claim 5–15% response ([Perspective](https://getperspective.ai/blog/how-to-find-out-why-customers-cancel-2026-replacing-the-exit-survey), 🔴).
+- **No published benchmark exists for churned users completing a voice AI interview.** Our test produces the number.
+
+## 8. What the evidence does NOT prove (be honest in the pitch)
 - That **churned users will talk to an AI by voice at a useful rate.** No source measures this. **Our Oct 21 kill test is the evidence.**
 - Any reliable statistic on what share of "too expensive" answers are really something else. The 38% figure comes from one founder's data.
 - That voice beats a good text AI interviewer specifically for churn. The IZA result is about surveys in general.
