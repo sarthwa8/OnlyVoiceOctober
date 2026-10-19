@@ -67,3 +67,48 @@ def test_render_prompt_fills_placeholders_and_rules():
     assert "{" not in prompt.split("Placeholders")[-1].split("-->")[-1]
     assert "Priya" in prompt and "finished a trial" in prompt
     assert "Do not make any offers" in prompt
+
+
+def test_openai_compat_extraction_retries_on_bad_json(monkeypatch):
+    import json as _json
+
+    from churncall import llm
+    from churncall.extraction import extract_insight
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai_compat")
+    monkeypatch.setenv("LLM_BASE_URL", "http://fake")
+    monkeypatch.setenv("LLM_MODEL", "free-model")
+    good = _insight(["never figured out how to connect my Shopify store"]).model_dump_json()
+    replies = iter(["Sure! here you go: not json", "```json\n" + good + "\n```"])
+    calls = []
+
+    class Resp:
+        def __init__(self, text):
+            self.text = text
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"choices": [{"message": {"content": self.text}}]}
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        calls.append(json)
+        return Resp(next(replies))
+
+    monkeypatch.setattr(llm.httpx, "post", fake_post)
+    insight, dropped = extract_insight(parse_bolna_webhook(PAYLOAD), "ctx")
+    assert len(calls) == 2 and calls[0]["response_format"] == {"type": "json_object"}
+    assert insight.primary_reason.code == "onboarding_friction" and dropped == 0
+    _ = _json  # silence linters
+
+
+def test_openai_compat_requires_model(monkeypatch):
+    import pytest
+
+    from churncall import llm
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai_compat")
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+    with pytest.raises(RuntimeError):
+        llm.model_for("smart")

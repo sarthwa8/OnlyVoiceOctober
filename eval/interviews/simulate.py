@@ -14,14 +14,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import anthropic
-
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
+from churncall import llm  # noqa: E402
 from churncall.guide import Company, Contact, render_prompt  # noqa: E402
-
-INTERVIEWER_MODEL = "claude-opus-5-5"
-PERSONA_MODEL = "claude-haiku-5-5"
 
 PERSONAS = {
     "terse": "You answer in a few words. You're busy and mildly annoyed but polite.",
@@ -44,7 +40,6 @@ LEADING = re.compile(r"\b(was it|is it because|did you leave because|was the (pr
 
 
 def run(persona: str, turns: int) -> dict:
-    client = anthropic.Anthropic()
     interviewer_system = render_prompt(COMPANY, CONTACT)
     persona_system = (
         f"You are {CONTACT.name}, who recently cancelled {COMPANY.name}. {PERSONAS[persona]} "
@@ -54,14 +49,11 @@ def run(persona: str, turns: int) -> dict:
     persona_msgs: list[dict] = []
     log = []
     for _ in range(turns):
-        a = client.messages.create(model=INTERVIEWER_MODEL, max_tokens=400, output_config={"effort": "low"},
-                                   system=interviewer_system, messages=interviewer_msgs)
-        agent_text = "".join(b.text for b in a.content if b.type == "text").strip()
+        agent_text = llm.complete(interviewer_system, interviewer_msgs, kind="smart", max_tokens=400, effort="low").strip()
         log.append({"speaker": "agent", "text": agent_text})
-        interviewer_msgs.append({"role": "assistant", "content": a.content})
+        interviewer_msgs.append({"role": "assistant", "content": agent_text})
         persona_msgs.append({"role": "user", "content": agent_text})
-        u = client.messages.create(model=PERSONA_MODEL, max_tokens=300, system=persona_system, messages=persona_msgs)
-        user_text = "".join(b.text for b in u.content if b.type == "text").strip()
+        user_text = llm.complete(persona_system, persona_msgs, kind="cheap", max_tokens=300).strip()
         log.append({"speaker": "user", "text": user_text})
         persona_msgs.append({"role": "assistant", "content": user_text})
         interviewer_msgs.append({"role": "user", "content": user_text})
@@ -87,5 +79,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--persona", choices=sorted(PERSONAS), default="price_cover")
     p.add_argument("--turns", type=int, default=10)
-    r = run(p.parse_args().persona, p.parse_args().turns)
+    args = p.parse_args()
+    r = run(args.persona, args.turns)
     print(json.dumps({k: v for k, v in r.items() if k != "turns"}, indent=2))

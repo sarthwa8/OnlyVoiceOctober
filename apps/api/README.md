@@ -8,7 +8,8 @@
 | `churncall/guide.py` | Fills the prompt from company + contact context |
 | `churncall/bolna.py` | Starts a "call me now" outbound call through Bolna |
 | `churncall/webhook.py` | Parses Bolna's post-call webhook (transcript, recording, duration) and computes the user talk ratio |
-| `churncall/extraction.py` | Claude (`claude-opus-5-5`) structured extraction of the churn insight, then **drops any quote not found word for word in the user's lines** |
+| `churncall/llm.py` | Provider switch: Anthropic (default) or any OpenAI-compatible endpoint, including free tiers. JSON + schema validation + one retry for non-Anthropic models. |
+| `churncall/extraction.py` | Structured extraction through `llm.py` of the churn insight, then **drops any quote not found word for word in the user's lines** |
 | `churncall/main.py` | FastAPI: `GET /healthz`, `POST /calls` (refuses without consent), `POST /bolna/webhook` |
 | `../../eval/interviews/simulate.py` | Text simulation: our interviewer vs 6 churned-user personas, with talk ratio and leading-question checks |
 
@@ -30,3 +31,7 @@ Results go to `data/*.jsonl` (transcripts, insights, errors). That's enough for 
 - [ ] Webhook payload: save one real payload to `apps/api/tests/fixtures/` and adjust `webhook.py`
 - [ ] Webhook auth: does Bolna sign webhooks or support a custom header? Wire it into `WEBHOOK_SECRET`.
 - [ ] Turn-taking settings in `config.json` (endpointing, silence re-prompt, hangup, max duration)
+
+## Using a free LLM instead of Claude
+Set `LLM_PROVIDER=openai_compat`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` (and optionally `LLM_MODEL_CHEAP`) in `.env`. See `.env.example`.
+Free models are weaker at structured output, so `llm.py` asks for JSON, validates it against the schema and retries once; the verbatim-quote check still runs. Compare the free model's extraction against Claude on the same 5 transcripts before trusting it. Free tiers have rate limits and may use your data for training, so don't send real customer transcripts to a provider whose terms you haven't read.

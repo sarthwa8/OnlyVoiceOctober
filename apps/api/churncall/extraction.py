@@ -11,9 +11,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from . import llm
 from .webhook import CallRecord
-
-EXTRACTION_MODEL = "claude-opus-5-5"
 
 ReasonCode = Literal[
     "onboarding_friction",
@@ -88,24 +87,8 @@ def verify_quotes(insight: CallInsight, record: CallRecord) -> tuple[CallInsight
 
 
 def extract_insight(record: CallRecord, company_context: str, client=None) -> tuple[CallInsight, int]:
-    """Call Claude with structured output, then verify quotes. Returns (insight, quotes_dropped)."""
-    if client is None:
-        import anthropic
-
-        client = anthropic.Anthropic()
-    response = client.messages.parse(
-        model=EXTRACTION_MODEL,
-        max_tokens=16000,
-        output_config={"effort": "medium"},
-        system=SYSTEM,
-        messages=[
-            {
-                "role": "user",
-                "content": f"Company context:\n{company_context}\n\nTranscript:\n{record.transcript_text}",
-            }
-        ],
-        output_format=CallInsight,
-    )
-    if response.stop_reason == "refusal" or response.parsed_output is None:
-        raise RuntimeError(f"Extraction failed: stop_reason={response.stop_reason}")
-    return verify_quotes(response.parsed_output, record)
+    """Structured extraction through the configured LLM provider, then verify quotes.
+    Returns (insight, quotes_dropped)."""
+    user = f"Company context:\n{company_context}\n\nTranscript:\n{record.transcript_text}"
+    insight = llm.extract_structured(SYSTEM, user, CallInsight, client=client)
+    return verify_quotes(insight, record)
