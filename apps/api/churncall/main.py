@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from .bolna import BolnaClient
 from .extraction import extract_insight
 from .guide import Company, Contact, render_prompt
+from .invites import router as invites_router
 from .webhook import parse_bolna_webhook
 
 load_dotenv()
@@ -25,6 +26,7 @@ DATA_DIR = Path(os.environ.get("CHURNCALL_DATA_DIR", "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="ChurnCall API")
+app.include_router(invites_router)  # invite links + funnel (build-plans/01-invite-page.md)
 
 
 class CallMeRequest(BaseModel):

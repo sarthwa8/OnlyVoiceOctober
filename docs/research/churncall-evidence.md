@@ -44,13 +44,15 @@
 **Implication:** browser voice plus calls the user asks for is a requirement, not just good UX.
 
 ## 6. ⚠️ Competitors: checked 2026-10-18 (they already do voice churn interviews)
+> Full mechanics teardown and what to copy: [koji-perspective-teardown.md](koji-perspective-teardown.md)
+
 | | **Koji** (koji.so) | **Perspective AI** (getperspective.ai) |
 |---|---|---|
 | What it is | An AI interviewer that runs adaptive interviews, with churn interviews and pricing research as named use cases | An "independent AI interviewer" for customer conversations, positioned on retention and customer success (CEO is a former CS executive) |
 | Channel | **Text and voice** (a voice interview costs 3 credits, text 1) | **Voice or chat across web, email, SMS, Slack, WhatsApp and phone**. Claims 57 auto-detected voice languages. |
 | When it triggers | Interviews churned users "within 2 weeks" of cancelling (manual or campaign-based, not clearly event-triggered) | A blog post describes a short AI conversation **inside the cancellation flow** that routes savable users to an offer |
 | Integrations | Not confirmed | Salesforce, HubSpot, Slack |
-| Price | **€29/month (29 credits) and €79/month (79 credits)**, free tier of 10 credits, €1 per extra credit | Free start, no annual contract; tiers not found |
+| Price | **€29/month (29 credits) and €79/month (79 credits)**, free tier of 10 credits, €1 per extra credit | Free 100 credits; **Pro $99/month = 1,000 credits** (~$1 per conversation) |
 | Funding | Not found | **$4M seed** (Jan 2025: Village Global, Array and others) |
 | Sources | [plans](https://www.koji.so/docs/plan-comparison-guide), [SaaS use case](https://www.koji.so/docs/ai-research-for-saas) | [BusinessWire](https://www.businesswire.com/news/home/20250130668368/en/Perspective-AI-Emerges-from-Stealth-to-Deliver-Customer-Truths), [exit-survey blog](https://getperspective.ai/blog/how-to-find-out-why-customers-cancel-2026-replacing-the-exit-survey) |
 
@@ -78,7 +80,7 @@ All of this is from their own sites (🟡). Perspective's comparison page also c
 - That voice beats a good text AI interviewer specifically for churn. The IZA result is about surveys in general.
 
 ## Pitch-safe one-liners
-1. "Investors have put over $100M into AI customer interviews. Listen Labs alone raised $69M. But they run scheduled studies. Nobody interviews the customer at the moment they leave."
+1. "Investors have put over $100M into AI customer interviews. Listen Labs alone raised $69M. But they run scheduled studies on a web page. Nobody calls churned customers, in their language, and gets the savable ones on the phone with the founder the same day." *(Rewritten 2026-10-18: Perspective already interviews inside the cancel flow, see the [teardown](koji-perspective-teardown.md).)*
 2. "Small SaaS companies lose 3–7% of customers every month, and their exit survey says 'too expensive'."
 3. "A randomised study found spoken answers carry more information than typed ones, and people disclose more to a computer than to a person."
 4. "Since 2024, AI voice calls need consent in the US, so in ChurnCall the user always starts the conversation."
