@@ -4,3 +4,8 @@ __pycache__/
 .env
 .pytest_cache/
 eval/interviews/runs/
+# Real churned-user data (emails, phones, transcripts): never commit
+data/
+# Next.js
+apps/web/.next/
+apps/web/node_modules/
