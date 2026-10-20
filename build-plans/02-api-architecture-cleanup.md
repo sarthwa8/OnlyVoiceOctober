@@ -11,8 +11,8 @@
 | 0 Safety | ✅ done | 41 tests (incl. new negative tests); smoke: `/api/calls`, `/api/docs`, `/api/admin/*`, `/api/healthz` all 404 through Next.js; webhook without secret → 401 |
 | 1 Config + store | ✅ done | `os.environ` only in `config.py`; files only in `store.py`; `main.DATA_DIR` test workarounds removed; 20-thread double-completion test |
 | 2 Split + app factory | ✅ done | Characterization snapshots unchanged; route list = expected; largest module 194 lines; no FastAPI imports outside `api/`; full smoke through Next.js → FastAPI → Bolna mint → webhook → funnel |
-| 3 Packaging | ⏳ next | |
-| 4 Types + dedupe | ⏳ | |
+| 3 Packaging | ✅ done | `apps/api/pyproject.toml` (deps pinned to the verified versions, `[dev]` = pytest); `requirements.txt` removed; 44 tests pass in a **fresh venv** from `pip install -e "apps/api[dev]"`; no `sys.path` edits left (tests load scripts via `conftest.load_script`) |
+| 4 Types + dedupe | ✅ done | `EventName` Literal + `Event` model validate every write (typo test); one `log_event_once()` replaced `record_opened` / `opt_out` / `log_once_per_call` and `mark_completed`'s own check; `BolnaClient.upsert_agent()` used by `sync.py`; stale VERIFY markers removed (one real one left: the webhook payload shape); `sync.py --dry-run` output **byte-identical** before/after; snapshots unchanged |
 | 5 Web | ⏳ with the results page | |
 
 **Found and fixed along the way (deliberate behaviour changes, also in §6):**

@@ -1,7 +1,7 @@
 # Koji and Perspective AI teardown: what to copy, what to beat
 
 > 2026-10-18 · Built from their public docs, pricing pages and embed SDK reference, **not hands-on use** (🟡 vendor claims).
-> Still to do: the 30-minute hands-on test in [ACTION_PLAN](../ACTION_PLAN.md) (go through each as a churned user, keep DevTools → Network open, and screenshot every screen).
+> Still to do: the 30-minute hands-on test in the action plan (now [Sarthak's plan](../../build-plans/00-sarthaks-plan.md)) (go through each as a churned user, keep DevTools → Network open, and screenshot every screen).
 > Related: [ChurnCall spec](../CHURNCALL.md) · [evidence §6](churncall-evidence.md)
 
 ---

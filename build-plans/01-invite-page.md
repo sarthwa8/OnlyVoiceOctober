@@ -1,7 +1,7 @@
 # Build plan 01: Invite page (bare minimum, Next.js)
 
 > v2.1 (verified against Bolna docs, the web-call README, ngrok v3.39 CLI and Sarthak's code on 2026-10-19) · Owner: **Pranav (Person B)** · Backend owner: **Sarthak (Person A)**
-> Target: working end to end by **Mon Oct 20 morning**, so real invites go out before the **Tue Oct 21 go/no-go** ([ACTION_PLAN](../docs/ACTION_PLAN.md)).
+> Target: working end to end by **Mon Oct 20 morning**, so real invites go out before the **Tue Oct 21 go/no-go** (the original v1 action plan; now superseded by [Sarthak's plan](00-sarthaks-plan.md)).
 > **No styling.** Default browser look, readable on a phone. The only job: **email link → user consents → interview starts → every step is counted correctly.**
 > Product spec: [CHURNCALL.md](../docs/CHURNCALL.md) · Backend: [apps/api/README.md](../apps/api/README.md) · Bolna Web Call SDK: [docs](https://www.bolna.ai/docs/sdks/web-call)
 

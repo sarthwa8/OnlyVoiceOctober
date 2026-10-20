@@ -24,7 +24,7 @@ Dependencies only point downward: `api/` → use cases → domain → adapters �
 
 ## Run
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -r apps/api/requirements.txt
+python3 -m venv .venv && .venv/bin/pip install -e "apps/api[dev]"   # pinned deps in apps/api/pyproject.toml
 cp .env.example .env   # fill ANTHROPIC_API_KEY, BOLNA_API_KEY, BOLNA_AGENT_ID, WEBHOOK_SECRET
 .venv/bin/python -m pytest -q apps/api/tests
 cd apps/api && ../../.venv/bin/uvicorn churncall.main:app --reload
