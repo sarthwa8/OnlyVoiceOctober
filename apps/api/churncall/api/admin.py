@@ -7,6 +7,7 @@ import hmac
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
+from .. import results
 from ..config import get_settings
 from ..funnel import funnel
 
@@ -23,3 +24,18 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 @router.get("/funnel")
 def get_funnel() -> dict:
     return funnel()
+
+
+@router.get("/reasons", response_model=list[results.ReasonGroup])
+def get_reasons(company: str | None = None) -> list[results.ReasonGroup]:
+    return results.reasons(company)
+
+
+@router.get("/calls")
+def get_calls(company: str | None = None, status: str | None = None) -> dict:
+    return {"invites": results.list_invites(company, status), "unlinked": results.unlinked_calls()}
+
+
+@router.get("/calls/{token}", response_model=results.InviteDetail)
+def get_call_detail(token: str) -> results.InviteDetail:
+    return results.invite_detail(token)

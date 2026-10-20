@@ -1,16 +1,11 @@
 import json
-import sys
-from pathlib import Path
 
 import pytest
+from conftest import load_script
 from fastapi.testclient import TestClient
 
-ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(ROOT / "scripts"))
-
-from churncall import calls, funnel, invites, store, webhooks  # noqa: E402
-from churncall.api import create_app  # noqa: E402
+from churncall import calls, invites, store, webhooks
+from churncall.api import create_app
 
 ASHA = {"name": "Asha Rao", "email": "asha@example.com", "phone_e164": "+919800000123", "plan": "pro",
         "mrr": "49", "trigger": "cancelled", "tenure_days": "140", "incentive": "$5 voucher", "email_variant": "founder"}
@@ -43,8 +38,7 @@ def test_create_invite_validates_and_stores():
 
 
 def test_make_invites_script_writes_links(data_dir, tmp_path_factory, capsys):
-    import make_invites
-
+    make_invites = load_script("scripts/make_invites.py")
     csv_path = tmp_path_factory.mktemp("in") / "acme.csv"
     csv_path.write_text("name,email,phone_e164,email_variant\nAsha,asha@example.com,+919800000123,founder\n"
                         "Ben,not-an-email,,generic\nCara,cara@example.com,,generic\n")
@@ -127,7 +121,8 @@ def test_main_app_exposes_exactly_the_expected_routes():
 
     paths = set(app.openapi()["paths"])  # builds the schema even though /openapi.json isn't served
     assert paths == {"/healthz", "/admin/funnel", "/bolna/webhook", "/invites/{token}", "/invites/{token}/event",
-                     "/invites/{token}/optout", "/invites/{token}/web-session", "/invites/{token}/call"}
+                     "/invites/{token}/optout", "/invites/{token}/web-session", "/invites/{token}/call",
+                     "/admin/reasons", "/admin/calls", "/admin/calls/{token}"}  # results page (build plan 03)
 
 
 class FakeBolna:
@@ -163,14 +158,21 @@ def test_build_user_data_fills_every_bolna_placeholder_and_per_invite_incentive(
     data = calls.build_user_data(inv, "phone")
     assert data["invite_token"] == inv.token and data["channel"] == "phone"
     assert "$5 voucher" in data["incentive_line"]  # CSV incentive overrides the company default (none)
-    sys.path.insert(0, str(ROOT / "agents"))
-    import sync  # the exact prompt + welcome message pushed to the Bolna agent
-
+    sync = load_script("agents/sync.py")  # the exact prompt + welcome message pushed to the Bolna agent
     payload = sync.build_payload()
     bolna_text = payload["agent_prompts"]["task_1"]["system_prompt"] + payload["agent_config"]["agent_welcome_message"]
     placeholders = set(re.findall(r"\{\{([a-z_]+)\}\}", bolna_text))
     assert placeholders and placeholders <= set(data)  # Bolna gets a value for every {{placeholder}}
     assert "{contact_name}" not in data["system_prompt"] and "Asha Rao" in data["system_prompt"]
+
+
+def test_sync_refuses_single_brace_placeholders(tmp_path, monkeypatch):
+    sync = load_script("agents/sync.py")
+    (tmp_path / "config.json").write_text((sync.AGENT_DIR / "config.json").read_text())
+    (tmp_path / "prompt.md").write_text('Hi {contact_name}\n\n## Open the call exactly like this\n"{{opening_line}}"\n')
+    monkeypatch.setattr(sync, "AGENT_DIR", tmp_path)
+    with pytest.raises(SystemExit, match="single-brace"):
+        sync.build_payload()
 
 
 def test_call_requires_consent_and_valid_phone(client, bolna):
@@ -334,6 +336,41 @@ def test_webhook_failing_funnel_step_still_saves_everything(api, monkeypatch):
     assert "e7" in (store.data_dir() / "transcripts.jsonl").read_text()
     steps = [json.loads(line)["step"] for line in (store.data_dir() / "errors.jsonl").read_text().splitlines()]
     assert steps == ["funnel", "extraction"]  # extraction fails too (no LLM in tests), and is logged separately
+
+
+def test_browser_call_counts_as_started_only_once_connected(client):
+    """A minted session happens before the mic prompt; someone who then blocks the mic never started."""
+    denied, talked = invites.create_invite("acme", ASHA), invites.create_invite("acme", BEN)
+    for inv in (denied, talked):
+        invites.log_event(inv.token, "opened")
+        invites.log_event(inv.token, "started_web", {"execution_id": f"run_{inv.token}"})
+    invites.log_event(denied.token, "mic_denied")
+    invites.log_event(talked.token, "web_connected", {"execution_id": f"run_{talked.token}"})
+
+    assert client.get(f"/invites/{denied.token}").json()["status"] == "opened"
+    assert client.get(f"/invites/{talked.token}").json()["status"] == "started"
+    f = client.get("/admin/funnel", headers={"X-Admin-Key": "test-admin"}).json()["overall"]
+    assert (f["opened"], f["started"], f["started_by_channel"]) == (2, 1, {"web": 1})
+    assert invites.starts_count(invites.events_for(denied.token)) == 1  # still counts toward the 3-attempt limit
+
+
+def test_unknown_event_names_are_rejected():
+    import pydantic
+
+    inv = invites.create_invite("acme", ASHA)
+    with pytest.raises(pydantic.ValidationError):
+        invites.log_event(inv.token, "complted")  # a typo must fail, not silently skew the funnel
+    assert invites.events_for(inv.token) == []
+
+
+def test_log_event_once_per_invite_or_per_call():
+    inv = invites.create_invite("acme", ASHA)
+    assert invites.log_event_once(inv.token, "opened") is True
+    assert invites.log_event_once(inv.token, "opened") is False
+    assert invites.log_event_once(inv.token, "call_not_connected", {"status": "busy"}, execution_id="e1") is True
+    assert invites.log_event_once(inv.token, "call_not_connected", {"status": "busy"}, execution_id="e1") is False
+    assert invites.log_event_once(inv.token, "call_not_connected", {"status": "no-answer"}, execution_id="e2") is True
+    assert [e["event"] for e in invites.events_for(inv.token)] == ["opened", "call_not_connected", "call_not_connected"]
 
 
 def test_concurrent_completions_count_once():
