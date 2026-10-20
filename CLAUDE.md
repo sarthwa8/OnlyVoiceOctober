@@ -1,0 +1,30 @@
+# CLAUDE.md: project context
+
+## The one goal
+We are building **ChurnCall** for the Bolna Buildathon, and nothing else. ChurnCall is an AI voice interviewer (on Bolna) that talks to a SaaS company's churned users and turns those conversations into churn reasons weighted by revenue at risk, with verbatim quotes.
+- Spec: `docs/CHURNCALL.md`. This week's plan: `docs/ACTION_PLAN.md`. Build plans: `build-plans/`.
+- **`archive/` holds dropped ideas (CareCall, FieldLog, PagerCall, Awaaz Relay, idea brainstorms). Never build from it, suggest those ideas, or treat it as current.** Only open it if someone asks about the history.
+- New features get a build plan in `build-plans/NN-name.md` first (steps, how each connects to the system, how to check it), like `01-invite-page.md`.
+
+## Team and dates
+- Sarthak: AI + voice (Bolna agent, prompt, extraction, evals). Pranav: product + GTM (invite flow, web app, pilots, pitch).
+- Shared repo `sarthwa8/OnlyVoiceOctober`. Default/shared branch: `claude/bold-allen-oicfqq`. Pranav works on `pranav` and merges via PRs.
+- Kill-test go/no-go Oct 21 · submit Oct 30 (deadline Oct 31) · finale Nov 20.
+
+## How the system fits together
+CSV of churned users → `scripts/make_invites.py` → private links → user opens `/i/<token>` (Next.js, `apps/web`) → "Talk in browser" (Bolna Web Call SDK) or "Call me now" (Bolna outbound) → Bolna agent (`agents/interviewer/`) → Bolna webhook → FastAPI (`apps/api`) marks the invite completed, saves the transcript, runs extraction → `/invites/funnel`.
+- Next.js forwards `/api/*` to FastAPI, so there's one public origin. Secrets live only in the root `.env` (gitignored). `apps/web/.env.local` holds no secrets.
+- Storage is JSONL in `CHURNCALL_DATA_DIR` (`data/`, gitignored: real emails, phones and transcripts). It moves to Supabase after a "go".
+- Push agent changes with `python agents/sync.py` (`--dry-run` first). `prompt.md` is the Bolna template and `config.json` holds Bolna's v2 agent schema.
+
+## Bolna facts we've verified (don't re-guess these)
+- Prompt variables use `{{name}}` and are filled from a call's `user_data`.
+- Webhooks fire on **every status change**; only `status == "completed"` has the full transcript and recording.
+- `POST /call` returns `execution_id`. Browser sessions are minted with `POST /web-call/freeswitch-session` (per `@bolna/web-call` 3.0.1), and the response includes `run_id`.
+- Webhook source IPs: 13.203.39.153, 13.126.9.249, 13.202.133.53.
+- Our account (2026-10-20): web calls enabled, max 2 concurrent calls, no phone numbers listed (outbound untested).
+
+## Rules
+- Users always start the conversation (tap in the browser or ask for a call). Never cold-call. The server refuses calls without consent.
+- Never commit `.env`, `data/` or real user data. Every quote in an insight must appear word for word in the transcript.
+- Run tests with `.venv/bin/python -m pytest -q apps/api/tests`. For the web app: `npm run lint` and `npx tsc --noEmit` in `apps/web`.

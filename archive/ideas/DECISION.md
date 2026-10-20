@@ -1,8 +1,8 @@
 # Decision: what we build for the Bolna Buildathon
 
-> ⚠️ **Not chosen (2026-10-18):** the locked build is **[CHURNCALL.md](CHURNCALL.md)**. This doc is kept for reference.
+> ⚠️ **Not chosen (2026-10-18):** the locked build is **[CHURNCALL.md](../../docs/CHURNCALL.md)**. This doc is kept for reference.
 
-> 2026-10-18 · Status: **awaiting approval** · Research inputs: [docs/research/](research/)
+> 2026-10-18 · Status: **awaiting approval** · Research inputs: [docs/research/](../../docs/research)
 > Deadline: submit by **Oct 31** · Shortlist Nov 3 · Interviews Nov 5–7 · Finale (top 3, YC interview prize) **Nov 20**
 
 ## TL;DR
@@ -100,4 +100,4 @@ It's the strongest pure-business story and the lowest risk. But the demo is a da
 5. **Alerts channel:** WhatsApp (Twilio sandbox / Meta Cloud API test number) plus Telegram fallback, plus voice-call alerts for urgent events. OK?
 6. **Name:** "CareCall" for the product, "Kavach" for the scam shield. Or something more Indian, e.g. *Saathi* (companion)?
 
-The full build document and day-by-day plan are in **[BUILD_PLAN.md](BUILD_PLAN.md)**.
+The full build document and day-by-day plan are in **[BUILD_PLAN.md](CARECALL_BUILD_PLAN.md)**.

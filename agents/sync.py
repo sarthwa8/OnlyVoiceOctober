@@ -6,7 +6,8 @@
 Builds the payload from agents/interviewer/config.json (Bolna settings) and prompt.md (the prompt).
 prompt.md uses Bolna's {{double_brace}} placeholders (guide.py fills the same ones locally); any stray
 {single_brace} ones are converted here. Bolna fills them from a call's user_data. The prompt's opener becomes the welcome message, which
-Bolna speaks first, so the prompt tells the LLM not to repeat it.
+Bolna speaks first, so the prompt tells the LLM not to repeat it. When PUBLIC_BASE_URL is an https URL,
+the agent's webhook is set to <PUBLIC_BASE_URL>/api/bolna/webhook (Next.js forwards it to FastAPI).
 """
 
 from __future__ import annotations
@@ -48,6 +49,9 @@ def build_payload() -> dict:
     )
 
     config["agent_welcome_message"] = to_bolna_placeholders(opener.group(1))
+    base = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+    if base.startswith("https://"):  # Bolna can't reach localhost; only set a public webhook
+        config["webhook_url"] = f"{base}/api/bolna/webhook"
     return {"agent_config": config, "agent_prompts": {"task_1": {"system_prompt": to_bolna_placeholders(prompt)}}}
 
 
