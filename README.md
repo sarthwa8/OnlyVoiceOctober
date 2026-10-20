@@ -8,7 +8,7 @@ The AI that calls your churned users and tells you why they left. When a SaaS us
 |---|---|
 | **Today and this week** | [docs/ACTION_PLAN.md](docs/ACTION_PLAN.md) |
 | **Product spec** (problem, product, architecture, evals, business) | [docs/CHURNCALL.md](docs/CHURNCALL.md) |
-| **Build plans** (one per feature, with steps and checks) | [build-plans/](build-plans/) · done: [01 invite page](build-plans/01-invite-page.md) |
+| **Build plans** (one per feature, with steps and checks) | [build-plans/](build-plans/) · done: [01 invite page](build-plans/01-invite-page.md) · next: [02 API architecture cleanup](build-plans/02-api-architecture-cleanup.md) |
 | Evidence and competitors | [docs/research/churncall-evidence.md](docs/research/churncall-evidence.md) · [Koji/Perspective teardown](docs/research/koji-perspective-teardown.md) |
 | Latest handoff between us | [docs/HANDOFF_2026-10-20.md](docs/HANDOFF_2026-10-20.md) · open questions for Bolna: [docs/BOLNA_QUESTIONS.md](docs/BOLNA_QUESTIONS.md) |
 | Hackathon rules and dates | [hackathon-details.md](hackathon-details.md) |
