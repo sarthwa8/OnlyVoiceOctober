@@ -9,3 +9,4 @@ data/
 # Next.js
 apps/web/.next/
 apps/web/node_modules/
+pilots/
