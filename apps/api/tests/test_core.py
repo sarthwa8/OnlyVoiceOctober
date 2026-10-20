@@ -162,3 +162,20 @@ def test_guardrails_bypass_sent_on_user_requested_calls(monkeypatch):
     monkeypatch.setattr(bolna.httpx, "post", lambda url, json=None, headers=None, timeout=None: sent.update(json) or R())
     bolna.BolnaClient(api_key="k", agent_id="a").start_outbound_call("+911234567890", {"x": "y"})
     assert sent["bypass_call_guardrails"] is True and sent["user_data"] == {"x": "y"}
+
+
+def test_invite_user_data_uses_channel_specific_opener():
+    """Browser calls must not say 'calling on behalf of' (build_user_data passes the channel through)."""
+    from churncall import invites
+    from churncall.guide import Company, Contact
+
+    company = Company(name="Shoplytics", product_description="x", founder_name="Priya")
+    inv = type("Inv", (), {"company_slug": "x", "incentive": None, "contact": Contact(name="Alex"), "token": "t"})()
+    orig = invites.load_company
+    invites.load_company = lambda slug: company
+    try:
+        web, phone = invites.build_user_data(inv, "web"), invites.build_user_data(inv, "phone")
+    finally:
+        invites.load_company = orig
+    assert "calling on behalf of" not in web["opening_line"] and "calling on behalf of" in phone["opening_line"]
+    assert web["channel"] == "web" and web["invite_token"] == "t"

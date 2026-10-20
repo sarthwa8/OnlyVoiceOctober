@@ -80,6 +80,7 @@ def prompt_variables(company: Company, contact: Contact, channel: str = "phone")
         "founder_name": company.founder_name,
         "contact_name": contact.name,
         "trigger_description": long_trigger,
+        "trigger_short": TRIGGERS.get(contact.trigger, TRIGGERS["cancelled"])[1],
         "research_goals": goals,
         "example_vague": "it wasn't working for us",
         "offer_rule": offer_rule,

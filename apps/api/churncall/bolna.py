@@ -38,3 +38,16 @@ class BolnaClient:
         resp = httpx.post(f"{self.base_url}/call", json=payload, headers=self._headers(), timeout=timeout)  # VERIFY path
         resp.raise_for_status()
         return resp.json()
+
+    def mint_web_session(self, user_data: dict, timeout: float = 15.0) -> dict:
+        """Mint a single-use (~120 s) browser call session for the Web Call SDK.
+
+        The SDK never sees our API key: the browser asks our server, our server asks Bolna.
+        POST /web-call/freeswitch-session, per the @bolna/web-call 3.0.1 README (the docs page says
+        /web-call/session, which is older). The response includes run_id (the execution id). Needs the
+        Web Call SDK enabled on the account.
+        """
+        payload = {"agent_id": self.agent_id, "user_data": user_data}
+        resp = httpx.post(f"{self.base_url}/web-call/freeswitch-session", json=payload, headers=self._headers(), timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
