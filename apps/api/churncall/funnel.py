@@ -5,8 +5,9 @@ from __future__ import annotations
 
 from collections import Counter
 
-from .invites import START_EVENTS, Invite, all_invites, events_by_token, load_company
+from .invites import START_EVENTS, STARTED_EVENTS, Invite, all_invites, events_by_token, load_company
 
+# "started" = a phone call Bolna accepted, or a browser call that connected (see invites.STARTED_EVENTS).
 STAGES = ["invited", "opened", "started", "completed", "opted_out"]
 
 
@@ -14,8 +15,8 @@ def _stages_reached(events: list[dict]) -> set[str]:
     names = {e["event"] for e in events}
     reached = {"invited"}
     if names & {"opened", "web_connected", "mic_denied", "call_ended_client"} or names & START_EVENTS.keys():
-        reached.add("opened")  # anyone who started must have opened, even if the beacon was lost
-    if names & START_EVENTS.keys():
+        reached.add("opened")  # anyone who tried to start must have opened, even if the beacon was lost
+    if names & STARTED_EVENTS.keys():
         reached.add("started")
     if "completed" in names:
         reached |= {"opened", "started", "completed"}
@@ -29,9 +30,12 @@ def _summarise(rows: list[tuple[Invite, list[dict]]]) -> dict:
     started_by, completed_by = Counter(), Counter()
     for _, events in rows:
         counts.update(_stages_reached(events))
-        for channel in {START_EVENTS[e["event"]] for e in events if e["event"] in START_EVENTS}:
-            started_by[channel] += 1
         done = next((e for e in events if e["event"] == "completed"), None)
+        started = {STARTED_EVENTS[e["event"]] for e in events if e["event"] in STARTED_EVENTS}
+        if done and done["meta"].get("channel"):
+            started.add(done["meta"]["channel"])  # a completed call started, even if its "connected" beacon was lost
+        for channel in started:
+            started_by[channel] += 1
         if done:
             completed_by[done["meta"].get("channel") or "unknown"] += 1
     out = {stage: counts[stage] for stage in STAGES}

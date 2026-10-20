@@ -10,14 +10,13 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import sys
 from datetime import datetime
 from pathlib import Path
 
+from churncall import llm
+from churncall.interview import Company, Contact, render_prompt
+
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "apps" / "api"))
-from churncall import llm  # noqa: E402
-from churncall.interview import Company, Contact, render_prompt  # noqa: E402
 
 PERSONAS = {
     "terse": "You answer in a few words. You're busy and mildly annoyed but polite.",

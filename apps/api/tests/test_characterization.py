@@ -7,16 +7,13 @@ Regenerate (deliberately) with:  UPDATE_SNAPSHOTS=1 pytest apps/api/tests/test_c
 
 import json
 import os
-import sys
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from churncall import invites, store  # noqa: E402
-from churncall.interview import Contact  # noqa: E402
+from churncall import invites, store
+from churncall.interview import Contact
 
 SNAPSHOTS = Path(__file__).parent / "snapshots"
 COMPANY = {"name": "Acme", "product_description": "invoicing for freelancers", "founder_name": "Priya",

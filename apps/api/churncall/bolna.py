@@ -3,8 +3,9 @@
 If Bolna's payloads turn out different from what we expect (where user_data comes back in the webhook
 is still unconfirmed), this is the one file to change.
 
-Endpoint paths and payload field names marked VERIFY are our best understanding of Bolna's API;
-confirm them against the Bolna docs before relying on them.
+Request shapes were checked against Bolna's docs on 2026-10-20: POST /call (agent_id,
+recipient_phone_number, user_data, bypass_call_guardrails -> execution_id), POST /v2/agent and
+PUT /v2/agent/{id}. The browser-session mint follows the @bolna/web-call 3.0.1 README.
 """
 
 from __future__ import annotations
@@ -38,16 +39,27 @@ class BolnaClient:
         """Place a call the user explicitly requested ("call me now"). Never use for cold calls.
 
         bypass_guardrails: the user asked for this call right now, so Bolna's calling-hours guardrails
-        must not block it (e.g. a tap at 11 pm). Bolna's /call documents `bypass_call_guardrails` [VERIFY name].
+        must not block it (e.g. a tap at 11 pm).
         user_data fills the {{variables}} in the agent prompt; include invite_token/channel so the webhook can link back.
+        Returns Bolna's {"message", "status": "queued", "execution_id"}.
         """
         payload = {
-            "agent_id": self.agent_id,  # VERIFY field name
-            "recipient_phone_number": phone_e164,  # VERIFY field name
-            "user_data": user_data,  # fills {{variables}} in the agent prompt
-            "bypass_call_guardrails": bypass_guardrails,  # VERIFY field name
+            "agent_id": self.agent_id,
+            "recipient_phone_number": phone_e164,
+            "user_data": user_data,
+            "bypass_call_guardrails": bypass_guardrails,
         }
-        resp = httpx.post(f"{self.base_url}/call", json=payload, headers=self._headers(), timeout=timeout)  # VERIFY path
+        resp = httpx.post(f"{self.base_url}/call", json=payload, headers=self._headers(), timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+
+    def upsert_agent(self, payload: dict, agent_id: str | None = None, timeout: float = 30.0) -> dict:
+        """Create the agent (POST /v2/agent) or, given an id, replace its config (PUT /v2/agent/{id}).
+        Raises httpx.HTTPStatusError with Bolna's response on failure."""
+        if agent_id:
+            resp = httpx.put(f"{self.base_url}/v2/agent/{agent_id}", json=payload, headers=self._headers(), timeout=timeout)
+        else:
+            resp = httpx.post(f"{self.base_url}/v2/agent", json=payload, headers=self._headers(), timeout=timeout)
         resp.raise_for_status()
         return resp.json()
 

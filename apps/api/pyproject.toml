@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "churncall"
+version = "0.1.0"
+description = "ChurnCall API: invite links, Bolna calls, webhook pipeline and churn-insight extraction"
+requires-python = ">=3.12"
+# Pinned to the versions the suite was verified with (2026-10-20). Bump deliberately, then run the tests.
+dependencies = [
+    "fastapi==0.146.0",
+    "uvicorn==0.54.0",
+    "httpx==0.28.1",
+    "pydantic==2.14.1",
+    "python-dotenv==1.2.4",
+    "anthropic==1.15.0",  # only imported when LLM_PROVIDER=anthropic
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1"]
+
+[tool.setuptools.packages.find]
+include = ["churncall*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

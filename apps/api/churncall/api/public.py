@@ -59,8 +59,8 @@ def get_public_invite(token: str) -> PublicInvite:
 @router.post("/{token}/event")
 def post_event(token: str, body: EventIn) -> dict:
     invites.require_invite(token)
-    if body.event == "opened":
-        return {"ok": True} if invites.record_opened(token) else {"ok": True, "duplicate": True}
+    if body.event == "opened":  # counted once per invite, however often the page loads
+        return {"ok": True} if invites.log_event_once(token, "opened") else {"ok": True, "duplicate": True}
     invites.log_event(token, body.event, body.meta)
     return {"ok": True}
 
@@ -68,7 +68,7 @@ def post_event(token: str, body: EventIn) -> dict:
 @router.post("/{token}/optout")
 def post_optout(token: str) -> dict:
     invites.require_invite(token)
-    invites.opt_out(token)
+    invites.log_event_once(token, "opted_out")
     return {"ok": True}
 
 

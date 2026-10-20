@@ -30,9 +30,9 @@ def record_call_outcome(payload: dict, record: CallRecord) -> str | None:
         if record.user_turns >= MIN_USER_TURNS:
             invites.mark_completed(token, record.execution_id, channel=variables.get("channel"))
         else:
-            invites.log_once_per_call(token, "call_too_short", record.execution_id, {"user_turns": record.user_turns})
+            invites.log_event_once(token, "call_too_short", {"user_turns": record.user_turns}, execution_id=record.execution_id)
     elif record.status in NOT_CONNECTED:
-        invites.log_once_per_call(token, "call_not_connected", record.execution_id, {"status": record.status})
+        invites.log_event_once(token, "call_not_connected", {"status": record.status}, execution_id=record.execution_id)
     return token
 
 

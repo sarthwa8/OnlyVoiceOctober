@@ -1,11 +1,6 @@
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from churncall.extraction import CallInsight, Quote, Reason, verify_quotes  # noqa: E402
-from churncall.bolna import parse_webhook as parse_bolna_webhook  # noqa: E402
-from churncall.interview import Company, Contact, render_prompt  # noqa: E402
+from churncall.bolna import parse_webhook as parse_bolna_webhook
+from churncall.extraction import CallInsight, Quote, Reason, verify_quotes
+from churncall.interview import Company, Contact, render_prompt
 
 PAYLOAD = {
     "id": "exec_123",
@@ -57,6 +52,18 @@ def test_verify_quotes_keeps_verbatim_and_drops_invented():
     )
     assert dropped == 2
     assert len(insight.primary_reason.evidence) == 2
+
+
+def test_verify_quotes_keeps_each_quote_once():
+    """Models repeat the main evidence in best_quotes; the results page should show it once."""
+    rec = parse_bolna_webhook(PAYLOAD)
+    insight = _insight(["never figured out how to connect my Shopify store", "Never figured out how to connect my Shopify store."])
+    insight.best_quotes = [Quote(quote="never figured out how to connect my Shopify store"),
+                           Quote(quote="The import just spun forever")]
+    insight, dropped = verify_quotes(insight, rec)
+    assert dropped == 0  # repeats aren't invented, so they don't count as dropped
+    assert [q.quote for q in insight.primary_reason.evidence] == ["never figured out how to connect my Shopify store"]
+    assert [q.quote for q in insight.best_quotes] == ["The import just spun forever"]
 
 
 def test_render_prompt_fills_placeholders_and_rules():

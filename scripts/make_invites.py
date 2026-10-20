@@ -12,14 +12,11 @@ from __future__ import annotations
 
 import argparse
 import csv
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps" / "api"))
-
-from churncall import store  # noqa: E402
-from churncall.config import get_settings  # noqa: E402
-from churncall.invites import create_invite, load_company  # noqa: E402
+from churncall import store
+from churncall.config import get_settings
+from churncall.invites import create_invite, load_company
 
 
 def main(argv: list[str] | None = None) -> int:

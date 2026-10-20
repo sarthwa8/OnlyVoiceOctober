@@ -21,10 +21,9 @@
       "invited": 2,
       "opened": 2,
       "opted_out": 0,
-      "started": 2,
+      "started": 1,
       "started_by_channel": {
-        "phone": 1,
-        "web": 1
+        "phone": 1
       }
     }
   },
@@ -37,10 +36,9 @@
       "invited": 2,
       "opened": 2,
       "opted_out": 0,
-      "started": 2,
+      "started": 1,
       "started_by_channel": {
-        "phone": 1,
-        "web": 1
+        "phone": 1
       }
     },
     "generic": {
@@ -74,10 +72,9 @@
       "invited": 2,
       "opened": 2,
       "opted_out": 0,
-      "started": 2,
+      "started": 1,
       "started_by_channel": {
-        "phone": 1,
-        "web": 1
+        "phone": 1
       }
     },
     "yes": {
@@ -105,10 +102,10 @@
     "invited": 5,
     "opened": 5,
     "opted_out": 1,
-    "started": 4,
+    "started": 3,
     "started_by_channel": {
       "phone": 2,
-      "web": 2
+      "web": 1
     }
   }
 }

@@ -4,32 +4,33 @@
     python agents/sync.py                  # create (and save the new id to .env) or update
 
 Builds the payload from agents/interviewer/config.json (Bolna settings) and prompt.md (the prompt).
-prompt.md uses Bolna's {{double_brace}} placeholders (guide.py fills the same ones locally); any stray
-{single_brace} ones are converted here. Bolna fills them from a call's user_data. The prompt's opener becomes the welcome message, which
-Bolna speaks first, so the prompt tells the LLM not to repeat it. When PUBLIC_BASE_URL is an https URL,
-the agent's webhook is set to <PUBLIC_BASE_URL>/api/bolna/webhook (Next.js forwards it to FastAPI).
+prompt.md uses Bolna's {{double_brace}} placeholders, which Bolna fills from each call's user_data
+(churncall.interview fills the same ones locally); a stray {single_brace} one is refused.
+
+The prompt's opener becomes Bolna's welcome message, which Bolna speaks first, so the copy sent to Bolna
+says the opener was "already spoken". prompt.md itself keeps "Open the call exactly like this", because
+eval/interviews/simulate.py has no welcome message and needs the agent to say the opener as its first turn.
+
+When PUBLIC_BASE_URL is an https URL, the agent's webhook is set to <PUBLIC_BASE_URL>/api/bolna/webhook
+(Next.js forwards it to FastAPI).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
-from pathlib import Path
 
 import httpx
-from dotenv import load_dotenv
 
-ROOT = Path(__file__).resolve().parents[1]
-AGENT_DIR = ROOT / "agents" / "interviewer"
-ENV_PATH = ROOT / ".env"
+from churncall.bolna import BolnaClient
+from churncall.config import REPO_ROOT, get_settings
+
+AGENT_DIR = REPO_ROOT / "agents" / "interviewer"
+ENV_PATH = REPO_ROOT / ".env"
 OPENER_HEADING = "## Open the call exactly like this"
-
-
-def to_bolna_placeholders(text: str) -> str:
-    return re.sub(r"(?<!\{)\{([a-z_]+)\}(?!\})", r"{{\1}}", text)
+_SINGLE_BRACE = re.compile(r"(?<!\{)\{[a-z_]+\}(?!\})")
 
 
 def build_payload() -> dict:
@@ -37,6 +38,8 @@ def build_payload() -> dict:
     config.pop("_comment", None)
     prompt = (AGENT_DIR / "prompt.md").read_text()
     prompt = re.sub(r"<!--.*?-->\n?", "", prompt, flags=re.S)  # drop the note meant for humans
+    if stray := _SINGLE_BRACE.findall(prompt):
+        raise SystemExit(f"prompt.md has single-brace placeholders Bolna won't fill: {sorted(set(stray))} (use {{{{name}}}})")
 
     opener = re.search(re.escape(OPENER_HEADING) + r'\n"(.+?)"\n', prompt)
     if not opener:
@@ -48,11 +51,11 @@ def build_payload() -> dict:
         "Do not repeat it. Continue from their answer.\n",
     )
 
-    config["agent_welcome_message"] = to_bolna_placeholders(opener.group(1))
-    base = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+    config["agent_welcome_message"] = opener.group(1)
+    base = get_settings().public_base_url
     if base.startswith("https://"):  # Bolna can't reach localhost; only set a public webhook
         config["webhook_url"] = f"{base}/api/bolna/webhook"
-    return {"agent_config": config, "agent_prompts": {"task_1": {"system_prompt": to_bolna_placeholders(prompt)}}}
+    return {"agent_config": config, "agent_prompts": {"task_1": {"system_prompt": prompt}}}
 
 
 def save_agent_id(agent_id: str) -> None:
@@ -67,7 +70,6 @@ def save_agent_id(agent_id: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    load_dotenv(ENV_PATH)
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dry-run", action="store_true", help="print the payload and exit")
     args = parser.parse_args(argv)
@@ -77,22 +79,16 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2))
         return 0
 
-    key = os.environ.get("BOLNA_API_KEY")
-    if not key:
+    settings = get_settings()
+    if not settings.bolna_api_key:
         raise SystemExit("BOLNA_API_KEY is not set in .env")
-    base = os.environ.get("BOLNA_API_BASE", "https://api.bolna.ai").rstrip("/")
-    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-    agent_id = os.environ.get("BOLNA_AGENT_ID", "").strip()
-
-    if agent_id:
-        resp = httpx.put(f"{base}/v2/agent/{agent_id}", json=payload, headers=headers, timeout=30)
-    else:
-        resp = httpx.post(f"{base}/v2/agent", json=payload, headers=headers, timeout=30)
-    if resp.status_code >= 400:
-        print(f"Bolna returned {resp.status_code}: {resp.text}", file=sys.stderr)
+    agent_id = settings.bolna_agent_id.strip() or None
+    try:
+        body = BolnaClient().upsert_agent(payload, agent_id=agent_id)
+    except httpx.HTTPStatusError as exc:
+        print(f"Bolna returned {exc.response.status_code}: {exc.response.text}", file=sys.stderr)
         return 1
 
-    body = resp.json()
     if agent_id:
         print(f"Updated agent {agent_id}: {body}")
     else:

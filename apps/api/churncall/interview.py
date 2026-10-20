@@ -61,13 +61,13 @@ def opening_line(company: Company, contact: Contact, channel: str = "phone") -> 
         return (
             f"Hi {name}, thanks for joining. I'm an AI assistant helping {founder} at {company.name}. "
             f"You recently {short}, and {founder} would really value your honest take on what didn't work. "
-            "It takes about four minutes, and this conversation is recorded so the team can learn from it. "
+            "It takes about three minutes, and this conversation is recorded so the team can learn from it. "
             "Is now a good time?"
         )
     return (
         f"Hi {name}, I'm an AI assistant calling on behalf of {founder} at {company.name}. "
         f"You recently {short}, and {founder} would really value your honest take on what didn't work. "
-        "It takes about four minutes, and this call is recorded so the team can learn from it. Is now okay?"
+        "It takes about three minutes, and this call is recorded so the team can learn from it. Is now okay?"
     )
 
 
