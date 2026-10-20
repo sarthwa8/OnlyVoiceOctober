@@ -8,11 +8,12 @@ same template so simulate.py and tests see exactly what the agent would.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-PROMPT_PATH = Path(__file__).resolve().parents[3] / "agents" / "interviewer" / "prompt.md"
+from .config import get_settings
+
+PROMPT_PATH = get_settings().prompt_path
 
 TRIGGERS = {
     "cancelled": ("cancelled their subscription", "cancelled"),
@@ -47,9 +48,14 @@ class Contact(BaseModel):
     usage_facts: list[str] = Field(default_factory=list)
 
 
+def trigger_phrases(trigger: str) -> tuple[str, str]:
+    """(long, short) wording for why they left, e.g. ("cancelled their subscription", "cancelled")."""
+    return TRIGGERS.get(trigger, TRIGGERS["cancelled"])
+
+
 def opening_line(company: Company, contact: Contact, channel: str = "phone") -> str:
     """The first thing the agent says. Always discloses AI + recording and offers an out."""
-    _, short = TRIGGERS.get(contact.trigger, TRIGGERS["cancelled"])
+    _, short = trigger_phrases(contact.trigger)
     founder, name = company.founder_name, contact.name
     if channel == "web":
         return (
@@ -67,7 +73,7 @@ def opening_line(company: Company, contact: Contact, channel: str = "phone") -> 
 
 def prompt_variables(company: Company, contact: Contact, channel: str = "phone") -> dict[str, str]:
     """Flat string variables for Bolna's user_data. Keys match the {{names}} in prompt.md."""
-    long_trigger, _ = TRIGGERS.get(contact.trigger, TRIGGERS["cancelled"])
+    long_trigger, short_trigger = trigger_phrases(contact.trigger)
     goals = "\n".join(f"{i}. {g}" for i, g in enumerate(company.research_goals, 1))
     offer_rule = (
         f"- Only near the end, and only if they sound open to it, you may mention: {company.win_back_offer}"
@@ -80,7 +86,7 @@ def prompt_variables(company: Company, contact: Contact, channel: str = "phone")
         "founder_name": company.founder_name,
         "contact_name": contact.name,
         "trigger_description": long_trigger,
-        "trigger_short": TRIGGERS.get(contact.trigger, TRIGGERS["cancelled"])[1],
+        "trigger_short": short_trigger,
         "research_goals": goals,
         "example_vague": "it wasn't working for us",
         "offer_rule": offer_rule,

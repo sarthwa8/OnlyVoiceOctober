@@ -5,6 +5,21 @@
 > **Rule for the whole plan: behaviour doesn't change unless a step says so.** Every phase ends with all tests green and the same public routes (except the deliberate changes listed in §6).
 > Related: [01 invite page](01-invite-page.md) · [CLAUDE.md](../CLAUDE.md) · [ChurnCall spec](../docs/CHURNCALL.md)
 
+## Progress (2026-10-20)
+| Phase | Status | Verified by |
+|---|---|---|
+| 0 Safety | ✅ done | 41 tests (incl. new negative tests); smoke: `/api/calls`, `/api/docs`, `/api/admin/*`, `/api/healthz` all 404 through Next.js; webhook without secret → 401 |
+| 1 Config + store | ✅ done | `os.environ` only in `config.py`; files only in `store.py`; `main.DATA_DIR` test workarounds removed; 20-thread double-completion test |
+| 2 Split + app factory | ✅ done | Characterization snapshots unchanged; route list = expected; largest module 194 lines; no FastAPI imports outside `api/`; full smoke through Next.js → FastAPI → Bolna mint → webhook → funnel |
+| 3 Packaging | ⏳ next | |
+| 4 Types + dedupe | ⏳ | |
+| 5 Web | ⏳ with the results page | |
+
+**Found and fixed along the way (deliberate behaviour changes, also in §6):**
+- A failed extraction was retried, and the transcript re-stored, on every Bolna resend of "completed" (the "already done?" check looked at `insights.jsonl`, which a failure never writes). Now keyed on `transcripts.jsonl`. Caught by the characterization replay test; `webhook_replay.json` updated once, on purpose.
+- Tests used to load the real `.env` (live Bolna key) whenever they imported `main`. `tests/conftest.py` now sets `CHURNCALL_LOAD_DOTENV=0`.
+- `/healthz` now reports `missing_for_calls` (names of unset required keys, never values).
+
 ---
 
 ## 0. Why this plan exists
@@ -333,6 +348,10 @@ Each phase lists **what to build**, **how it works**, **how to check it**, and *
 | Docs/OpenAPI off unless `CHURNCALL_ENV=local` | 0 | Us when debugging (set the env var) | C3 |
 | Funnel: `?key=` → `X-Admin-Key` header; `/invites/funnel` → `/admin/funnel` | 0 / 2 | Us (curl), the future results page | C3; admin routes in one place |
 | `requirements.txt` → `pyproject.toml` | 3 | Setup command in the README | S5 |
+| Transcript stored / extraction run once per call even when extraction fails (was: retried on every resend) | 0 | LLM cost, `transcripts.jsonl` | Bug found by the characterization tests |
+| Webhook writes `webhooks.jsonl` (raw payloads) and tags `errors.jsonl` rows with `step` | 0 | Anyone reading the data files | C2 |
+| `/healthz` adds `missing_for_calls` | 1 | Nobody (additive) | S4 |
+| `CallRecord.status` is lowercased when parsed; web session reads only `run_id`; extraction's company context uses `bolna.call_variables()` (also reads `recipient_data`) | 2 | Nobody in practice (Bolna sends lowercase statuses; the SDK's session type defines `run_id`) | S3 |
 
 ---
 

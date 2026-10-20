@@ -12,9 +12,10 @@ We are building **ChurnCall** for the Bolna Buildathon, and nothing else. ChurnC
 - Kill-test go/no-go Oct 21 · submit Oct 30 (deadline Oct 31) · finale Nov 20.
 
 ## How the system fits together
-CSV of churned users → `scripts/make_invites.py` → private links → user opens `/i/<token>` (Next.js, `apps/web`) → "Talk in browser" (Bolna Web Call SDK) or "Call me now" (Bolna outbound) → Bolna agent (`agents/interviewer/`) → Bolna webhook → FastAPI (`apps/api`) marks the invite completed, saves the transcript, runs extraction → `/invites/funnel`.
-- Next.js forwards `/api/*` to FastAPI, so there's one public origin. Secrets live only in the root `.env` (gitignored). `apps/web/.env.local` holds no secrets.
-- Storage is JSONL in `CHURNCALL_DATA_DIR` (`data/`, gitignored: real emails, phones and transcripts). It moves to Supabase after a "go".
+CSV of churned users → `scripts/make_invites.py` → private links → user opens `/i/<token>` (Next.js, `apps/web`) → "Talk in browser" (Bolna Web Call SDK) or "Call me now" (Bolna outbound) → Bolna agent (`agents/interviewer/`) → Bolna webhook → FastAPI (`apps/api`) saves the raw payload, marks the invite completed, saves the transcript, runs extraction → `GET /admin/funnel` (header `X-Admin-Key`).
+- API layers (build plan 02): `api/` (HTTP only) → `calls`, `webhooks`, `funnel`, `invites` (use cases) → `interview`, `extraction` → `store`, `bolna`, `llm` (adapters) → `config`. Only `config.py` reads env vars; only `store.py` touches files; only `bolna.py` knows Bolna's shapes; use cases raise `errors.py` exceptions that `api/` maps to status codes.
+- Next.js forwards only `/api/invites/*` and `/api/bolna/webhook` to FastAPI (one public origin; docs and admin stay private). Secrets live only in the root `.env` (gitignored). `apps/web/.env.local` holds no secrets.
+- Storage is JSONL in `CHURNCALL_DATA_DIR` (`data/`, gitignored: real emails, phones and transcripts). It moves to Supabase after a "go" by rewriting `store.py`.
 - Push agent changes with `python agents/sync.py` (`--dry-run` first). `prompt.md` is the Bolna template and `config.json` holds Bolna's v2 agent schema.
 
 ## Bolna facts we've verified (don't re-guess these)
@@ -27,4 +28,4 @@ CSV of churned users → `scripts/make_invites.py` → private links → user op
 ## Rules
 - Users always start the conversation (tap in the browser or ask for a call). Never cold-call. The server refuses calls without consent.
 - Never commit `.env`, `data/` or real user data. Every quote in an insight must appear word for word in the transcript.
-- Run tests with `.venv/bin/python -m pytest -q apps/api/tests`. For the web app: `npm run lint` and `npx tsc --noEmit` in `apps/web`.
+- Run tests with `.venv/bin/python -m pytest -q apps/api/tests` (they never read the real `.env`). Characterization snapshots in `apps/api/tests/snapshots/` only change on purpose. For the web app: `npm run lint` and `npx tsc --noEmit` in `apps/web`.

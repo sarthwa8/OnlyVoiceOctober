@@ -4,8 +4,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from churncall.extraction import CallInsight, Quote, Reason, verify_quotes  # noqa: E402
-from churncall.guide import Company, Contact, render_prompt  # noqa: E402
-from churncall.webhook import parse_bolna_webhook  # noqa: E402
+from churncall.bolna import parse_webhook as parse_bolna_webhook  # noqa: E402
+from churncall.interview import Company, Contact, render_prompt  # noqa: E402
 
 PAYLOAD = {
     "id": "exec_123",
@@ -115,7 +115,7 @@ def test_openai_compat_requires_model(monkeypatch):
 
 
 def test_prompt_template_variables_all_have_values():
-    from churncall.guide import PROMPT_PATH, prompt_variables
+    from churncall.interview import PROMPT_PATH, prompt_variables
     import re
 
     used = set(re.findall(r"\{\{(\w+)\}\}", PROMPT_PATH.read_text()))
@@ -124,7 +124,7 @@ def test_prompt_template_variables_all_have_values():
 
 
 def test_opening_line_differs_by_channel_and_always_discloses_ai():
-    from churncall.guide import opening_line
+    from churncall.interview import opening_line
 
     c, k = Company(name="Shoplytics", product_description="x", founder_name="Priya"), Contact(name="Alex")
     phone, web = opening_line(c, k, "phone"), opening_line(c, k, "web")
@@ -134,15 +134,15 @@ def test_opening_line_differs_by_channel_and_always_discloses_ai():
 
 
 def test_webhook_skips_non_completed_and_repeats(tmp_path, monkeypatch):
-    import churncall.main as m
+    from churncall import webhooks
 
-    monkeypatch.setattr(m, "DATA_DIR", tmp_path)
+    monkeypatch.setenv("CHURNCALL_DATA_DIR", str(tmp_path))
     seen = []
-    monkeypatch.setattr(m, "extract_insight", lambda rec, company_context: (seen.append(rec.execution_id) or _insight(["x"]), 0))
-    m._process({**PAYLOAD, "status": "call-disconnected"})
+    monkeypatch.setattr(webhooks, "extract_insight", lambda rec, company_context: (seen.append(rec.execution_id) or _insight(["x"]), 0))
+    webhooks.handle_bolna_webhook({**PAYLOAD, "status": "call-disconnected"})
     assert not (tmp_path / "transcripts.jsonl").exists() and seen == []
-    m._process(PAYLOAD)
-    m._process(PAYLOAD)  # Bolna can resend; must not extract twice
+    webhooks.handle_bolna_webhook(PAYLOAD)
+    webhooks.handle_bolna_webhook(PAYLOAD)  # Bolna can resend; must not extract twice
     assert seen == ["exec_123"]
     assert len((tmp_path / "transcripts.jsonl").read_text().splitlines()) == 1
 
@@ -166,15 +166,15 @@ def test_guardrails_bypass_sent_on_user_requested_calls(monkeypatch):
 
 def test_invite_user_data_uses_channel_specific_opener():
     """Browser calls must not say 'calling on behalf of' (build_user_data passes the channel through)."""
-    from churncall import invites
-    from churncall.guide import Company, Contact
+    from churncall import calls, invites
+    from churncall.interview import Company, Contact
 
     company = Company(name="Shoplytics", product_description="x", founder_name="Priya")
     inv = type("Inv", (), {"company_slug": "x", "incentive": None, "contact": Contact(name="Alex"), "token": "t"})()
     orig = invites.load_company
     invites.load_company = lambda slug: company
     try:
-        web, phone = invites.build_user_data(inv, "web"), invites.build_user_data(inv, "phone")
+        web, phone = calls.build_user_data(inv, "web"), calls.build_user_data(inv, "phone")
     finally:
         invites.load_company = orig
     assert "calling on behalf of" not in web["opening_line"] and "calling on behalf of" in phone["opening_line"]

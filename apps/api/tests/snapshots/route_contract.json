@@ -1,0 +1,14 @@
+{
+  "call_bad_phone": 422,
+  "call_finished": 409,
+  "call_no_consent": 400,
+  "call_ok": 200,
+  "call_too_many": 429,
+  "event_bad_name": 422,
+  "event_ok": 200,
+  "optout_ok": 200,
+  "public_view_ok": 200,
+  "public_view_unknown": 404,
+  "web_session_finished": 409,
+  "web_session_ok": 200
+}

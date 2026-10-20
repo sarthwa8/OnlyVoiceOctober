@@ -12,7 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from . import llm
-from .webhook import CallRecord
+from .bolna import CallRecord
 
 ReasonCode = Literal[
     "onboarding_friction",

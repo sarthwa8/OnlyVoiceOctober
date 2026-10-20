@@ -32,7 +32,7 @@
                                          ├─► extraction (Claude, verified quotes) ─► insights.jsonl      (Sarthak, done)
                                          └─► invite_events: "completed"                                   (this plan)
                                                                                      │
-                                         /invites/funnel ◄───────────────────────────┘  ──► Oct 21 go/no-go numbers
+                                         /admin/funnel ◄───────────────────────────┘  ──► Oct 21 go/no-go numbers
 ```
 
 **Who owns what**
@@ -140,7 +140,7 @@ FastAPI defines the routes below **without** `/api`. The browser calls them **wi
 | `POST /api/invites/{t}/web-session` | same | Builds `user_data` on the server → `BolnaClient.mint_web_session()` → returns Bolna's JSON **unchanged**. Logs `started_web`. | 404 / 409 (completed or opted out) / 429 after 3 starts. |
 | `POST /api/invites/{t}/call` | same | Body `{phone_e164?, consent}`. Empty phone → use the number from the CSV. Starts the outbound call with the same `user_data`. Logs `started_phone`. | `consent != true` → 400. Phone must match `^\+[1-9]\d{7,14}$` → else 422. 409 / 429 as above. |
 | `POST /api/invites/{t}/optout` | same | Logs `opted_out`. | Idempotent. |
-| `GET /api/invites/funnel?key=…` | same | Unique-user counts per stage, overall and grouped by `company`, `channel`, `incentive` (`yes`/`none`), `email_variant` | Wrong or missing key → 401. |
+| `GET /admin/funnel` (FastAPI directly, not via Next.js) + `X-Admin-Key` header | moved by plan 02 | Unique-user counts per stage, overall and grouped by `company`, `channel`, `incentive` (`yes`/`none`), `email_variant` | Wrong or missing key → 401. |
 | (Bolna) `POST /api/bolna/webhook` | existing | Sarthak's handler + mark completed | Existing `X-Webhook-Secret` check. |
 
 **`user_data` sent to Bolna** (both channels). Every key except `invite_token`, `channel` and `system_prompt` must match a `{{placeholder}}` in the Bolna agent's prompt:
@@ -222,7 +222,7 @@ Each step says **what you build**, **how it works**, **how it connects to the re
    "by_company": {"acme": {...}}, "by_incentive": {"yes": {...}, "none": {...}}, "by_email_variant": {"founder": {...}, "generic": {...}}}
   ```
 
-**Check:** `uvicorn` running → `curl localhost:8000/invites/<token>` returns the public view with a masked phone; `POST …/event {"event":"opened"}` twice → one `opened` line; `curl "localhost:8000/invites/funnel?key=…"` shows `opened: 1`.
+**Check:** `uvicorn` running → `curl localhost:8000/invites/<token>` returns the public view with a masked phone; `POST …/event {"event":"opened"}` twice → one `opened` line; `curl -H "X-Admin-Key: …" localhost:8000/admin/funnel` shows `opened: 1` (path and header since plan 02; it was `/invites/funnel?key=`).
 
 ---
 
