@@ -3,7 +3,7 @@
 ## What's here
 | Path | What it does |
 |---|---|
-| `../../agents/interviewer/prompt.md` | Interviewer system prompt v1, with placeholders filled per call |
+| `../../agents/interviewer/prompt.md` | The Bolna agent prompt, with `{{double_brace}}` variables filled per call from `user_data` |
 | `../../agents/interviewer/config.json` | Intended Bolna agent settings (fields marked VERIFY) |
 | `churncall/guide.py` | Fills the prompt from company + contact context |
 | `churncall/bolna.py` | Starts a "call me now" outbound call through Bolna |
@@ -26,7 +26,7 @@ Results go to `data/*.jsonl` (transcripts, insights, errors). That's enough for 
 
 ## Day-0 checklist: confirm against the Bolna docs or dashboard (I couldn't reach bolna.ai from my environment)
 - [ ] Outbound call endpoint path + field names (`/call`, `agent_id`, `recipient_phone_number`, `user_data`) in `bolna.py`
-- [ ] How `user_data` reaches the prompt. If Bolna can't take a whole system prompt per call, put the template in the agent and pass only the variables.
+- [x] Prompt is a `{{variable}}` template; paste `prompt.md` into the agent and pass variables via `user_data` (no whole-prompt override needed). Still [ ] confirm where `user_data` shows up in the webhook.
 - [ ] Web Call SDK: how to start a browser session and pass per-session context
 - [ ] Webhook payload: save one real payload to `apps/api/tests/fixtures/` and adjust `webhook.py`
 - [ ] Webhook auth: does Bolna sign webhooks or support a custom header? Wire it into `WEBHOOK_SECRET`.
@@ -35,3 +35,5 @@ Results go to `data/*.jsonl` (transcripts, insights, errors). That's enough for 
 ## Using a free LLM instead of Claude
 Set `LLM_PROVIDER=openai_compat`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` (and optionally `LLM_MODEL_CHEAP`) in `.env`. See `.env.example`.
 Free models are weaker at structured output, so `llm.py` asks for JSON, validates it against the schema and retries once; the verbatim-quote check still runs. Compare the free model's extraction against Claude on the same 5 transcripts before trusting it. Free tiers have rate limits and may use your data for training, so don't send real customer transcripts to a provider whose terms you haven't read.
+
+**Questions to send Bolna:** `docs/BOLNA_QUESTIONS.md` (paste-ready). **Handoff status:** `docs/HANDOFF_2026-10-20.md`.

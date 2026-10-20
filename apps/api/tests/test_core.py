@@ -64,7 +64,7 @@ def test_render_prompt_fills_placeholders_and_rules():
         Company(name="Shoplytics", product_description="analytics", founder_name="Priya"),
         Contact(name="Alex", trigger="trial_ended"),
     )
-    assert "{" not in prompt.split("Placeholders")[-1].split("-->")[-1]
+    assert "{{" not in prompt and "}}" not in prompt
     assert "Priya" in prompt and "finished a trial" in prompt
     assert "Do not make any offers" in prompt
 
@@ -112,3 +112,53 @@ def test_openai_compat_requires_model(monkeypatch):
     monkeypatch.delenv("LLM_MODEL", raising=False)
     with pytest.raises(RuntimeError):
         llm.model_for("smart")
+
+
+def test_prompt_template_variables_all_have_values():
+    from churncall.guide import PROMPT_PATH, prompt_variables
+    import re
+
+    used = set(re.findall(r"\{\{(\w+)\}\}", PROMPT_PATH.read_text()))
+    have = prompt_variables(Company(name="A", product_description="b", founder_name="C"), Contact(name="D"))
+    assert used <= have.keys(), used - have.keys()
+
+
+def test_opening_line_differs_by_channel_and_always_discloses_ai():
+    from churncall.guide import opening_line
+
+    c, k = Company(name="Shoplytics", product_description="x", founder_name="Priya"), Contact(name="Alex")
+    phone, web = opening_line(c, k, "phone"), opening_line(c, k, "web")
+    assert "calling on behalf of" in phone and "calling on behalf of" not in web
+    for line in (phone, web):
+        assert "AI assistant" in line and "recorded" in line
+
+
+def test_webhook_skips_non_completed_and_repeats(tmp_path, monkeypatch):
+    import churncall.main as m
+
+    monkeypatch.setattr(m, "DATA_DIR", tmp_path)
+    seen = []
+    monkeypatch.setattr(m, "extract_insight", lambda rec, company_context: (seen.append(rec.execution_id) or _insight(["x"]), 0))
+    m._process({**PAYLOAD, "status": "call-disconnected"})
+    assert not (tmp_path / "transcripts.jsonl").exists() and seen == []
+    m._process(PAYLOAD)
+    m._process(PAYLOAD)  # Bolna can resend; must not extract twice
+    assert seen == ["exec_123"]
+    assert len((tmp_path / "transcripts.jsonl").read_text().splitlines()) == 1
+
+
+def test_guardrails_bypass_sent_on_user_requested_calls(monkeypatch):
+    from churncall import bolna
+
+    sent = {}
+
+    class R:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"execution_id": "e1"}
+
+    monkeypatch.setattr(bolna.httpx, "post", lambda url, json=None, headers=None, timeout=None: sent.update(json) or R())
+    bolna.BolnaClient(api_key="k", agent_id="a").start_outbound_call("+911234567890", {"x": "y"})
+    assert sent["bypass_call_guardrails"] is True and sent["user_data"] == {"x": "y"}

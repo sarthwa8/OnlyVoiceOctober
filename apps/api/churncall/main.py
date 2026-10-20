@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from .bolna import BolnaClient
 from .extraction import extract_insight
-from .guide import Company, Contact, render_prompt
+from .guide import Company, Contact, prompt_variables, render_prompt
 from .invites import router as invites_router
 from .webhook import parse_bolna_webhook
 
@@ -51,17 +51,29 @@ def call_me_now(req: CallMeRequest) -> dict:
     """User tapped "call me now". Their tap is the consent; we refuse without it."""
     if not req.consent:
         raise HTTPException(status_code=400, detail="consent required: the user must request the call")
-    prompt = render_prompt(req.company, req.contact)
+    variables = prompt_variables(req.company, req.contact, channel="phone")
     result = BolnaClient().start_outbound_call(
         req.phone_e164,
-        user_data={"system_prompt": prompt, "contact_name": req.contact.name, "company_name": req.company.name},
+        # variables fill the agent's {{template}}; system_prompt is also sent in case Bolna lets user_data override it
+        user_data={**variables, "system_prompt": render_prompt(req.company, req.contact), "channel": "phone"},
     )
     _append("calls.jsonl", {"contact": req.contact.model_dump(), "company": req.company.name, "bolna": result})
     return {"ok": True, "bolna": result}
 
 
+def _already_extracted(execution_id: str) -> bool:
+    path = DATA_DIR / "insights.jsonl"
+    if not execution_id or not path.exists():
+        return False
+    return any(f'"execution_id": "{execution_id}"' in line for line in path.read_text().splitlines())
+
+
 def _process(payload: dict) -> None:
     record = parse_bolna_webhook(payload)
+    # Bolna fires a webhook on every status change; only "completed" carries the full transcript.
+    # Skipping the rest (and repeats) means each call is stored and extracted exactly once.
+    if record.status.lower() != "completed" or _already_extracted(record.execution_id):
+        return
     _append("transcripts.jsonl", record.model_dump(exclude={"raw"}))
     if not record.turns:
         return
