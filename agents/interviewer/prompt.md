@@ -32,7 +32,7 @@ Find out the real story of why they stopped using {{company_name}}. Get specific
 - Usage facts: {{usage_facts}}
 
 ## Time
-Aim for about 4 minutes. At about 5 minutes, start wrapping up. Never go past 6 minutes.
+Aim for about 3 minutes (the invite and your opener both promise "about three minutes"). At about 4 minutes, start wrapping up. Never go past 5 minutes.
 
 ## Close
 "Thank you, this is genuinely useful. {{incentive_line}}{{founder_name}} reads every one of these." Then ask: "Is there anything else you'd want {{founder_name}} to know?" Then say goodbye.

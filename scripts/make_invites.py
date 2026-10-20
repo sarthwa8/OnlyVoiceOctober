@@ -12,23 +12,18 @@ from __future__ import annotations
 
 import argparse
 import csv
-import os
-import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps" / "api"))
-
-from churncall.invites import _data_dir, create_invite, load_company  # noqa: E402
+from churncall import store
+from churncall.config import get_settings
+from churncall.invites import create_invite, load_company
 
 
 def main(argv: list[str] | None = None) -> int:
-    load_dotenv()
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--company", required=True, help="company slug, matching data/companies/<slug>.json")
     parser.add_argument("--csv", required=True, type=Path, help="churned users CSV from the pilot startup")
-    parser.add_argument("--base-url", default=os.environ.get("PUBLIC_BASE_URL", ""), help="defaults to $PUBLIC_BASE_URL")
+    parser.add_argument("--base-url", default=get_settings().public_base_url, help="defaults to $PUBLIC_BASE_URL")
     args = parser.parse_args(argv)
 
     if not args.base_url:
@@ -46,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
             except ValueError as exc:
                 skipped.append(f"row {row_number}: {exc}")
 
-    links_dir = _data_dir() / "links"
+    links_dir = store.data_dir() / "links"
     links_dir.mkdir(exist_ok=True)
     links_path = links_dir / f"{args.company}.csv"
     with links_path.open("a" if links_path.exists() else "w", newline="") as f:

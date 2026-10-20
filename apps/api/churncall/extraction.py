@@ -12,7 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from . import llm
-from .webhook import CallRecord
+from .bolna import CallRecord
 
 ReasonCode = Literal[
     "onboarding_friction",
@@ -64,19 +64,23 @@ def _normalise(text: str) -> str:
 
 
 def verify_quotes(insight: CallInsight, record: CallRecord) -> tuple[CallInsight, int]:
-    """Drop any quote not found verbatim (after whitespace/punctuation normalisation) in the user's turns."""
+    """Drop any quote not found verbatim (after whitespace/punctuation normalisation) in the user's turns.
+    Also keep each quote only once across the insight: models often repeat the main reason's evidence in
+    best_quotes. Repeats aren't counted as dropped (they're real, just duplicated)."""
     user_text = _normalise(" ".join(t.text for t in record.turns if t.speaker == "user"))
     dropped = 0
+    seen: set[str] = set()
 
     def keep(quotes: list[Quote]) -> list[Quote]:
         nonlocal dropped
         kept = []
         for q in quotes:
             norm = _normalise(q.quote)
-            if norm and norm in user_text:
-                kept.append(q)
-            else:
+            if not norm or norm not in user_text:
                 dropped += 1
+            elif norm not in seen:
+                seen.add(norm)
+                kept.append(q)
         return kept
 
     insight.primary_reason.evidence = keep(insight.primary_reason.evidence)

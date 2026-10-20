@@ -1,6 +1,6 @@
 # CareCall + Kavach: Build Document & Execution Plan
 
-> ⚠️ **Not chosen (2026-10-18):** the locked build is **[CHURNCALL.md](CHURNCALL.md)**. This doc is kept for reference.
+> ⚠️ **Not chosen (2026-10-18):** the locked build is **[CHURNCALL.md](../../docs/CHURNCALL.md)**. This doc is kept for reference.
 
 > v0.1 · 2026-10-18 · Status: **awaiting approval** · Why this idea: [DECISION.md](DECISION.md)
 > Anything marked **[verify]** is a Bolna/vendor behaviour we must confirm in the docs or by testing before relying on it.

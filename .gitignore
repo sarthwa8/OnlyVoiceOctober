@@ -10,3 +10,4 @@ data/
 apps/web/.next/
 apps/web/node_modules/
 pilots/
+*.egg-info/

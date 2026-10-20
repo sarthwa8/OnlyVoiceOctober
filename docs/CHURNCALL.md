@@ -2,7 +2,7 @@
 
 > v1.0 · 2026-10-18 · Team of **2** · Status: **🔒 LOCKED: this is what we're building**
 > Evidence base (sources + reliability): [research/churncall-evidence.md](research/churncall-evidence.md)
-> Decision history: [CareCall](DECISION.md) → [FieldLog](FIELDLOG.md) → [PagerCall](PAGERCALL.md) → **ChurnCall**. Earlier docs are kept for reference.
+> Earlier ideas we considered and dropped are in [archive/](../archive/README.md). Reference only; ChurnCall is the only thing we're building.
 > **[verify]** = confirm in Bolna or vendor docs, or with a real test, before relying on it. Numbers marked *(est.)* are assumptions to validate with pilots.
 
 ---
@@ -345,7 +345,7 @@ The evals run in CI on every prompt or guide change. **Publishing our interview-
 - **Go/no-go on Tue Oct 21 evening:**
   - ✅ **Go** if ≥ 15% of invited users complete (or ≥ 25% of those who open the email start a call) **and** the founders say at least 3 insights were new to them.
   - 🟡 **Adjust** if 5–15%: test a stronger incentive, founder-voice invites, SMS, or a smaller time ask ("2 minutes").
-  - ❌ **Kill** if < 5% after adjusting → pivot the same engine to **win-loss interviews** (B2B buyers who already took sales calls, so higher willingness) or to the PagerCall backup.
+  - ❌ **Kill** if < 5% after adjusting → pivot the same engine to **win-loss interviews** (B2B buyers who already took sales calls, so higher willingness) or to the India phone-first angle.
 
 ### 8.2 Roles
 - **Person A: AI + voice.** Bolna interviewer agent, guide compiler, coverage tracker (v2), extraction, synthesis/clustering, evals.

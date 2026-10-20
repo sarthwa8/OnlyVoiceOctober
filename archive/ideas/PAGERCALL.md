@@ -1,6 +1,6 @@
 # PagerCall: the AI on-call engineer you talk to at 3 a.m.
 
-> ⚠️ **Not chosen (2026-10-18):** the locked build is **[CHURNCALL.md](CHURNCALL.md)**. This doc is kept for reference.
+> ⚠️ **Not chosen (2026-10-18):** the locked build is **[CHURNCALL.md](../../docs/CHURNCALL.md)**. This doc is kept for reference.
 
 > v0.1 · 2026-10-18 · Team of **2** · Status: **recommended pick, awaiting approval**
 > Supersedes the CareCall recommendation in [DECISION.md](DECISION.md) (the brief changed: tech-industry, B2B, venture scale).

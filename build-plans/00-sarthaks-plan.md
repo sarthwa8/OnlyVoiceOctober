@@ -1,4 +1,8 @@
-# Action plan v2: phone-only, small pilot (Mon Oct 20 → submit Thu Oct 30)
+# Sarthak's plan: action plan v2, phone-only small pilot (Oct 20 → submit Oct 30)
+
+> **Author: Sarthak** · committed 2026-10-20, 7:52 PM · moved here from `docs/ACTION_PLAN.md` (unchanged below, except this title).
+> **Read the notes at the bottom** ([what's already built and what changed](#notes-whats-already-built-and-what-changed-since-this-plan-was-written)): parts of this plan were overtaken by work done the same evening.
+
 
 > Replaces v1 (Oct 18). What changed: **no browser SDK needed** (phone only; if Bolna enables it later we flip one switch),
 > and the "kill test" is now a **small private pilot**: 2 startups, 20–30 churned users each. No public launch.
@@ -204,3 +208,47 @@ Send each founder their report: the top reasons, 5 quotes, and what they could f
 | Fewer than 10 completed calls | Submit anyway, be honest about the numbers, and lead with the quality of what people said |
 | The AI behaves badly on calls | Fix the prompt that evening (Step 13). Don't send more invites until it's fixed. |
 | Bolna enables the browser SDK | Set `NEXT_PUBLIC_WEB_CALL_ENABLED=true` in `apps/web/.env.local` and restart the website. Done. |
+
+---
+
+## Notes: what's already built and what changed since this plan was written
+
+> Added by Pranav on 2026-10-20 (evening). The plan above is Sarthak's and stays as he wrote it. These notes record what was built the same day, so nobody redoes finished work or follows a step that no longer matches the code. Build plans: [01 invite page](01-invite-page.md) · [02 architecture cleanup](02-api-architecture-cleanup.md) · [03 results page](03-results-page.md).
+
+### 1. "Phone only": both channels are already built and working
+The plan assumes the Bolna browser SDK isn't available. It is: on 2026-10-20 our server minted a real browser session on our account (`POST /web-call/freeswitch-session` → 200 with a `run_id`). The invite page already offers both:
+- **Talk in browser** (Bolna Web Call SDK): no phone number needed, works for any country, and is the spec's main channel.
+- **Call me now** (Bolna outbound): consent checkbox, up to 3 attempts, calling-hours guardrails bypassed because the user asked.
+
+Today `apps/web/.env.local` has `NEXT_PUBLIC_WEB_CALL_ENABLED=true`, so both buttons show.
+
+**If we decide to run the pilot phone-only after all:**
+1. Set `NEXT_PUBLIC_WEB_CALL_ENABLED=false` in `apps/web/.env.local` and restart the web app. The page then shows only the phone form. No other code changes.
+2. These become **blockers** (they don't matter for browser calls):
+   - **A phone number on the Bolna account.** The account currently lists **none**, and outbound calling is **untested**.
+   - **Which countries that number can call** (question #2 in `docs/BOLNA_QUESTIONS.md`).
+   - **One successful test call to a real phone** (Step 8) before any invite goes out.
+   - Pilot CSVs need **phone numbers**, or users must type theirs on the page.
+   - Phone calls use telephony minutes from the wallet (currently 500; unit unconfirmed).
+3. **Recommendation:** keep both on. Browser removes the phone-number and country risks; phone stays for people who prefer it. Go phone-only only if browser calls misbehave in the dry run (Step 11).
+
+### 2. Part 1 setup: status on Pranav's laptop
+| Step | Status |
+|---|---|
+| 1 Code running | ✅ Setup is now `.venv/bin/pip install -e "apps/api[dev]"` (`requirements.txt` was replaced by `apps/api/pyproject.toml`). Tests: **55 passed** (not 31). |
+| 2 Keys | ✅ Bolna key · ✅ **Groq** for extraction (`openai/gpt-oss-120b`; checked on two sample transcripts, about 2.4 s each, all quotes word for word) · ✅ ngrok free static domain. ⚠️ Paid ngrok (or a deploy) still needed before real invites. |
+| 3 `.env` | ✅ Filled in (`CHURNCALL_ENV`, `ADMIN_KEY`, `WEBHOOK_SECRET`, `PUBLIC_BASE_URL`, absolute `CHURNCALL_DATA_DIR`, Groq settings). `apps/web/.env.local` also needs `ADMIN_KEY` now (for the results page). |
+| 4 Bolna agent | ✅ Created (`churncall-interviewer-v1`) with `agents/sync.py`; the current prompt is live (welcome message `{{opening_line}}`: separate phone and browser openers). Use the existing `BOLNA_AGENT_ID` so `sync.py` updates it instead of creating a duplicate. |
+| 5 Bolna questions | ⏳ Still to send. Account facts found via the API: web calls enabled, **max 2 concurrent calls**, **no phone numbers listed**. |
+| 6 Start everything | Same 3 terminals. On Pranav's laptop the API runs on **port 8010** (8000 is taken by another app), so `apps/web/.env.local` uses `API_URL=http://localhost:8010`. |
+| 7 Webhook URL | ✅ Set by `agents/sync.py` from `PUBLIC_BASE_URL` (no dashboard step needed). |
+| 8 Test call | ⏳ **Not done yet. This is the most important next step.** Raw webhooks are now saved automatically to `data/webhooks.jsonl`, so the fixture in 8.8 is a copy from there (remove the phone number). |
+| 9 Check the funnel | Changed: `/invites/funnel?key=…` no longer exists. Open **`/results`** (password = `ADMIN_KEY`) or run `curl -H "X-Admin-Key: $ADMIN_KEY" localhost:8010/admin/funnel`. |
+
+### 3. Things in the plan to update when you follow it
+- **Interview length is now "about 3 minutes" everywhere** (page, AI opener, prompt). Change "4-minute call" (Step 9 message) and "4 minutes" (Step 10 email) to 3.
+- **Part 4, Mon Oct 27 "simple results page": already built** ([build plan 03](03-results-page.md)). `/results` shows the funnel with completion rates, reasons with MRR and verified quotes, every person, and each call's transcript, insight and recording. Use it for the pilot log (Step 13) and the founder reports (Step 15).
+- **"Started" in the funnel** now means a phone call Bolna accepted, or a browser call that actually connected. Someone who blocked the mic no longer counts as started.
+- **Safety and structure** ([build plan 02](02-api-architecture-cleanup.md)): the old open `POST /calls` route is gone, Next.js only exposes the invite routes and the webhook, and the API code moved (`guide.py` → `interview.py`, `webhook.py` → `bolna.py`, the webhook pipeline → `webhooks.py`).
+- **Weekday labels:** Oct 20, 2026 is a **Tuesday**, so the plan's weekdays are one day off. Go by the dates: Wed Oct 21 dry run · Thu Oct 22 wave 1 · Sat–Sun Oct 24–25 wave 2 · Mon Oct 26 founder check-in · Tue–Fri Oct 27–30 finish and submit (Sat Oct 31 is the deadline).
+- **Demo data:** `scripts/seed_results_demo.py --data-dir <scratch dir>` fills a separate folder with realistic fake calls for practising the results page or recording the demo. It refuses the real `data/` folder.

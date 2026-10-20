@@ -11,22 +11,24 @@ Free models are weaker, so quote verification and schema validation stay on rega
 from __future__ import annotations
 
 import json
-import os
 import re
 
 import httpx
 from pydantic import BaseModel, ValidationError
 
+from .config import get_settings
+
 DEFAULT_ANTHROPIC = {"smart": "claude-opus-5-5", "cheap": "claude-haiku-5-5"}
 
 
 def provider() -> str:
-    return os.environ.get("LLM_PROVIDER", "anthropic").lower()
+    return get_settings().llm_provider
 
 
 def model_for(kind: str) -> str:
+    s = get_settings()
     env = "LLM_MODEL" if kind == "smart" else "LLM_MODEL_CHEAP"
-    value = os.environ.get(env) or os.environ.get("LLM_MODEL")
+    value = (s.llm_model if kind == "smart" else s.llm_model_cheap) or s.llm_model
     if value:
         return value
     if provider() == "anthropic":
@@ -35,14 +37,17 @@ def model_for(kind: str) -> str:
 
 
 def _chat_openai_compat(system: str, messages: list[dict], model: str, max_tokens: int, json_mode: bool = False) -> str:
-    base = os.environ["LLM_BASE_URL"].rstrip("/")
+    s = get_settings()
+    if not s.llm_base_url:
+        raise RuntimeError(f"Set LLM_BASE_URL for LLM_PROVIDER={provider()}")
+    base = s.llm_base_url
     body: dict = {"model": model, "max_tokens": max_tokens, "messages": [{"role": "system", "content": system}, *messages]}
     if json_mode:
         body["response_format"] = {"type": "json_object"}
     resp = httpx.post(
         f"{base}/chat/completions",
         json=body,
-        headers={"Authorization": f"Bearer {os.environ.get('LLM_API_KEY', '')}"},
+        headers={"Authorization": f"Bearer {s.llm_api_key}"},
         timeout=120.0,
     )
     resp.raise_for_status()

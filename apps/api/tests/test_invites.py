@@ -1,16 +1,11 @@
 import json
-import sys
-from pathlib import Path
 
 import pytest
-from fastapi import FastAPI
+from conftest import load_script
 from fastapi.testclient import TestClient
 
-ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(ROOT / "scripts"))
-
-from churncall import invites  # noqa: E402
+from churncall import calls, invites, store, webhooks
+from churncall.api import create_app
 
 ASHA = {"name": "Asha Rao", "email": "asha@example.com", "phone_e164": "+919800000123", "plan": "pro",
         "mrr": "49", "trigger": "cancelled", "tenure_days": "140", "incentive": "$5 voucher", "email_variant": "founder"}
@@ -29,9 +24,7 @@ def data_dir(tmp_path, monkeypatch):
 
 @pytest.fixture
 def client():
-    app = FastAPI()
-    app.include_router(invites.router)
-    return TestClient(app)
+    return TestClient(create_app())
 
 
 def test_create_invite_validates_and_stores():
@@ -45,8 +38,7 @@ def test_create_invite_validates_and_stores():
 
 
 def test_make_invites_script_writes_links(data_dir, tmp_path_factory, capsys):
-    import make_invites
-
+    make_invites = load_script("scripts/make_invites.py")
     csv_path = tmp_path_factory.mktemp("in") / "acme.csv"
     csv_path.write_text("name,email,phone_e164,email_variant\nAsha,asha@example.com,+919800000123,founder\n"
                         "Ben,not-an-email,,generic\nCara,cara@example.com,,generic\n")
@@ -112,9 +104,10 @@ def test_funnel_counts_unique_users_and_splits(client):
     invites.mark_completed(asha.token, "e2")
     invites.log_event(cara.token, "opted_out")
 
-    assert client.get("/invites/funnel").status_code == 401
-    assert client.get("/invites/funnel?key=wrong").status_code == 401
-    f = client.get("/invites/funnel?key=test-admin").json()
+    assert client.get("/admin/funnel").status_code == 401
+    assert client.get("/admin/funnel", headers={"X-Admin-Key": "wrong"}).status_code == 401
+    assert client.get("/admin/funnel?key=test-admin").status_code == 401  # the old query param no longer works
+    f = client.get("/admin/funnel", headers={"X-Admin-Key": "test-admin"}).json()
     assert f["overall"] == {"invited": 3, "opened": 2, "started": 1, "completed": 1, "opted_out": 1,
                             "started_by_channel": {"phone": 1}, "completed_by_channel": {"phone": 1}}
     assert f["by_incentive"]["yes"]["completed"] == 1 and f["by_incentive"]["none"]["invited"] == 2
@@ -122,12 +115,14 @@ def test_funnel_counts_unique_users_and_splits(client):
     assert f["by_company"]["acme"]["invited"] == 3
 
 
-def test_main_app_mounts_invite_routes(monkeypatch, tmp_path):
-    monkeypatch.chdir(tmp_path)  # main.py creates its data dir relative to the working directory
+def test_main_app_exposes_exactly_the_expected_routes():
+    """Build plan 02 §7.2: the route list only changes where §6 says it does."""
     from churncall.main import app
 
-    paths = set(app.openapi()["paths"])
-    assert {"/invites/funnel", "/invites/{token}", "/invites/{token}/event", "/invites/{token}/optout"} <= paths
+    paths = set(app.openapi()["paths"])  # builds the schema even though /openapi.json isn't served
+    assert paths == {"/healthz", "/admin/funnel", "/bolna/webhook", "/invites/{token}", "/invites/{token}/event",
+                     "/invites/{token}/optout", "/invites/{token}/web-session", "/invites/{token}/call",
+                     "/admin/reasons", "/admin/calls", "/admin/calls/{token}"}  # results page (build plan 03)
 
 
 class FakeBolna:
@@ -152,7 +147,7 @@ class FakeBolna:
 @pytest.fixture
 def bolna(monkeypatch):
     FakeBolna.calls, FakeBolna.fail_with = [], None
-    monkeypatch.setattr(invites, "BolnaClient", FakeBolna)
+    monkeypatch.setattr(calls, "BolnaClient", FakeBolna)
     return FakeBolna
 
 
@@ -160,17 +155,24 @@ def test_build_user_data_fills_every_bolna_placeholder_and_per_invite_incentive(
     import re
 
     inv = invites.create_invite("acme", ASHA)
-    data = invites.build_user_data(inv, "phone")
+    data = calls.build_user_data(inv, "phone")
     assert data["invite_token"] == inv.token and data["channel"] == "phone"
     assert "$5 voucher" in data["incentive_line"]  # CSV incentive overrides the company default (none)
-    sys.path.insert(0, str(ROOT / "agents"))
-    import sync  # the exact prompt + welcome message pushed to the Bolna agent
-
+    sync = load_script("agents/sync.py")  # the exact prompt + welcome message pushed to the Bolna agent
     payload = sync.build_payload()
     bolna_text = payload["agent_prompts"]["task_1"]["system_prompt"] + payload["agent_config"]["agent_welcome_message"]
     placeholders = set(re.findall(r"\{\{([a-z_]+)\}\}", bolna_text))
     assert placeholders and placeholders <= set(data)  # Bolna gets a value for every {{placeholder}}
     assert "{contact_name}" not in data["system_prompt"] and "Asha Rao" in data["system_prompt"]
+
+
+def test_sync_refuses_single_brace_placeholders(tmp_path, monkeypatch):
+    sync = load_script("agents/sync.py")
+    (tmp_path / "config.json").write_text((sync.AGENT_DIR / "config.json").read_text())
+    (tmp_path / "prompt.md").write_text('Hi {contact_name}\n\n## Open the call exactly like this\n"{{opening_line}}"\n')
+    monkeypatch.setattr(sync, "AGENT_DIR", tmp_path)
+    with pytest.raises(SystemExit, match="single-brace"):
+        sync.build_payload()
 
 
 def test_call_requires_consent_and_valid_phone(client, bolna):
@@ -251,13 +253,12 @@ def _webhook(execution_id, status, user_lines=3, context=None):
 
 
 @pytest.fixture
-def api(monkeypatch, tmp_path, data_dir):
-    monkeypatch.chdir(tmp_path)
-    from churncall import main
+def api(monkeypatch, data_dir):
+    """The app plus the webhook handler, with extraction failing like it does without an LLM key."""
+    from types import SimpleNamespace
 
-    monkeypatch.setattr(main, "extract_insight", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no LLM in tests")))
-    monkeypatch.setattr(main, "DATA_DIR", data_dir)
-    return main
+    monkeypatch.setattr(webhooks, "extract_insight", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no LLM in tests")))
+    return SimpleNamespace(app=create_app(), _process=webhooks.handle_bolna_webhook)
 
 
 def test_webhook_marks_completed_only_on_final_status_with_real_talk(api):
@@ -266,13 +267,13 @@ def test_webhook_marks_completed_only_on_final_status_with_real_talk(api):
     for status in ("queued", "ringing", "in-progress", "call-disconnected"):
         api._process(_webhook("e1", status, context=ctx))
     assert invites.events_for(inv.token) == []
-    assert not (api.DATA_DIR / "transcripts.jsonl").exists()  # in-between statuses aren't stored or extracted
+    assert not (store.data_dir() / "transcripts.jsonl").exists()  # in-between statuses aren't stored or extracted
 
     api._process(_webhook("e1", "completed", context=ctx))
     api._process(_webhook("e1", "completed", context=ctx))  # Bolna may resend
     done = [e for e in invites.events_for(inv.token) if e["event"] == "completed"]
     assert len(done) == 1 and done[0]["meta"] == {"execution_id": "e1", "channel": "phone"}
-    assert "no LLM in tests" in (api.DATA_DIR / "errors.jsonl").read_text()  # extraction failing doesn't undo it
+    assert "no LLM in tests" in (store.data_dir() / "errors.jsonl").read_text()  # extraction failing doesn't undo it
 
 
 def test_webhook_short_calls_and_unanswered_calls_dont_complete(api):
@@ -295,7 +296,7 @@ def test_webhook_finds_invite_via_recipient_data_or_execution_id(api):
 
 
 def test_webhook_auth_secret_header_or_bolna_ip(api, monkeypatch):
-    monkeypatch.setattr(api, "_process", lambda payload: None)
+    monkeypatch.setattr(webhooks, "handle_bolna_webhook", lambda payload: None)
     web = TestClient(api.app)
     body = {"id": "x", "status": "queued"}
     monkeypatch.delenv("WEBHOOK_SECRET", raising=False)
@@ -309,3 +310,83 @@ def test_webhook_auth_secret_header_or_bolna_ip(api, monkeypatch):
     assert web.post("/bolna/webhook", json=body, headers={"X-Forwarded-For": "13.203.39.153, 127.0.0.1"}).status_code == 200
     assert web.post("/bolna/webhook", json=body,
                     headers={"X-Forwarded-For": "13.203.39.153, 8.8.8.8, 127.0.0.1"}).status_code == 401
+
+
+# ---------- build plan 02, Phase 0: safety ----------
+
+def test_legacy_open_calls_route_is_gone(api):
+    web = TestClient(api.app)
+    assert web.post("/calls", json={"phone_e164": "+14155550100", "consent": True}).status_code in (404, 405)
+
+
+def test_docs_are_off_unless_local(monkeypatch):
+    # "" stands for "not set".
+    for env, expected in (("", 404), ("production", 404), ("local", 200)):
+        monkeypatch.setenv("CHURNCALL_ENV", env)
+        app = create_app()
+        assert TestClient(app).get("/docs").status_code == expected, env
+        assert TestClient(app).get("/openapi.json").status_code == expected, env
+
+
+def test_webhook_failing_funnel_step_still_saves_everything(api, monkeypatch):
+    inv = invites.create_invite("acme", ASHA)
+    monkeypatch.setattr(webhooks, "record_call_outcome", lambda *a: (_ for _ in ()).throw(FileNotFoundError("company gone")))
+    api._process(_webhook("e7", "completed", context={"invite_token": inv.token}))
+    assert "e7" in (store.data_dir() / "webhooks.jsonl").read_text()
+    assert "e7" in (store.data_dir() / "transcripts.jsonl").read_text()
+    steps = [json.loads(line)["step"] for line in (store.data_dir() / "errors.jsonl").read_text().splitlines()]
+    assert steps == ["funnel", "extraction"]  # extraction fails too (no LLM in tests), and is logged separately
+
+
+def test_browser_call_counts_as_started_only_once_connected(client):
+    """A minted session happens before the mic prompt; someone who then blocks the mic never started."""
+    denied, talked = invites.create_invite("acme", ASHA), invites.create_invite("acme", BEN)
+    for inv in (denied, talked):
+        invites.log_event(inv.token, "opened")
+        invites.log_event(inv.token, "started_web", {"execution_id": f"run_{inv.token}"})
+    invites.log_event(denied.token, "mic_denied")
+    invites.log_event(talked.token, "web_connected", {"execution_id": f"run_{talked.token}"})
+
+    assert client.get(f"/invites/{denied.token}").json()["status"] == "opened"
+    assert client.get(f"/invites/{talked.token}").json()["status"] == "started"
+    f = client.get("/admin/funnel", headers={"X-Admin-Key": "test-admin"}).json()["overall"]
+    assert (f["opened"], f["started"], f["started_by_channel"]) == (2, 1, {"web": 1})
+    assert invites.starts_count(invites.events_for(denied.token)) == 1  # still counts toward the 3-attempt limit
+
+
+def test_unknown_event_names_are_rejected():
+    import pydantic
+
+    inv = invites.create_invite("acme", ASHA)
+    with pytest.raises(pydantic.ValidationError):
+        invites.log_event(inv.token, "complted")  # a typo must fail, not silently skew the funnel
+    assert invites.events_for(inv.token) == []
+
+
+def test_log_event_once_per_invite_or_per_call():
+    inv = invites.create_invite("acme", ASHA)
+    assert invites.log_event_once(inv.token, "opened") is True
+    assert invites.log_event_once(inv.token, "opened") is False
+    assert invites.log_event_once(inv.token, "call_not_connected", {"status": "busy"}, execution_id="e1") is True
+    assert invites.log_event_once(inv.token, "call_not_connected", {"status": "busy"}, execution_id="e1") is False
+    assert invites.log_event_once(inv.token, "call_not_connected", {"status": "no-answer"}, execution_id="e2") is True
+    assert [e["event"] for e in invites.events_for(inv.token)] == ["opened", "call_not_connected", "call_not_connected"]
+
+
+def test_concurrent_completions_count_once():
+    """Webhooks run in a thread pool; the store lock stops two of them both passing the 'already completed?' check."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    inv = invites.create_invite("acme", ASHA)
+    with ThreadPoolExecutor(max_workers=20) as pool:
+        results = list(pool.map(lambda i: invites.mark_completed(inv.token, f"e{i}"), range(20)))
+    assert results.count(True) == 1
+    assert [e["event"] for e in invites.events_for(inv.token)] == ["completed"]
+
+
+def test_failed_extraction_is_not_retried_on_resend(api):
+    inv = invites.create_invite("acme", ASHA)
+    for _ in range(3):  # Bolna resends "completed"; extraction fails every time in tests
+        api._process(_webhook("e8", "completed", context={"invite_token": inv.token}))
+    assert len((store.data_dir() / "transcripts.jsonl").read_text().splitlines()) == 1
+    assert len((store.data_dir() / "errors.jsonl").read_text().splitlines()) == 1

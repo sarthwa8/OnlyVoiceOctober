@@ -1,6 +1,6 @@
 # Evaluation: Awaaz Relay (AI phone relay for deaf and hard-of-hearing Indians)
 
-> 2026-10-18 · Idea from a friend · Status: **evaluated, not adopted** (the locked build is still [ChurnCall](../CHURNCALL.md))
+> 2026-10-18 · Idea from a friend · Status: **evaluated, not adopted** (the locked build is still [ChurnCall](../../docs/CHURNCALL.md))
 
 ## The idea
 The deaf user types or taps quick replies. The AI speaks into a normal phone call (Hindi, Tamil or English) and shows the other party's speech as live captions. Inbound calls are answered with "This caller uses a relay, please speak normally" and captioned live.

@@ -1,0 +1,49 @@
+{
+  "events": [
+    [
+      "b",
+      "started_phone",
+      {
+        "execution_id": "e9"
+      }
+    ],
+    [
+      "a",
+      "completed",
+      {
+        "channel": "phone",
+        "execution_id": "e1"
+      }
+    ],
+    [
+      "b",
+      "call_not_connected",
+      {
+        "execution_id": "e9",
+        "status": "no-answer"
+      }
+    ],
+    [
+      "c",
+      "call_too_short",
+      {
+        "execution_id": "e3",
+        "user_turns": 1
+      }
+    ]
+  ],
+  "extraction_errors": [
+    "e1",
+    "e3"
+  ],
+  "transcripts": [
+    [
+      "e1",
+      "completed"
+    ],
+    [
+      "e3",
+      "completed"
+    ]
+  ]
+}

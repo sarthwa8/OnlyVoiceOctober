@@ -1,33 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { BolnaWebCall } from "@bolna/web-call";
+import { useEffect, useState } from "react";
+import { callMe, logEvent, optOut, type CallResult, type PublicInvite } from "@/lib/api";
+import { useWebCall, type WebCallState } from "@/lib/useWebCall";
+
+export type { PublicInvite };
 
 const WEB_CALL_ENABLED = process.env.NEXT_PUBLIC_WEB_CALL_ENABLED === "true";
 
-export type PublicInvite = {
-  first_name: string;
-  company_name: string;
-  founder_name: string;
-  trigger_short: string;
-  incentive: string | null;
-  phone_hint: string | null;
-  status: string;
-};
-
-type State =
-  | "idle"
-  | "connecting"
-  | "live"
-  | "ended"
-  | "mic_denied"
-  | "busy"
-  | "calling"
-  | "ringing"
-  | "bad_phone"
-  | "finished"
-  | "opted_out"
-  | "error";
+type State = "idle" | "calling" | "opted_out" | WebCallState | CallResult;
 
 const STATUS_TEXT: Record<State, string> = {
   idle: "",
@@ -44,84 +25,22 @@ const STATUS_TEXT: Record<State, string> = {
   error: "Something went wrong. Reply to the email and we'll sort it out.",
 };
 
-// How the API's answer to "Call me now" maps to what the user sees.
-function stateForCallResponse(status: number | undefined): State {
-  if (status === 200) return "ringing";
-  if (status === 422) return "bad_phone";
-  if (status === 409 || status === 429) return "finished";
-  return "error";
-}
-
-function post(path: string, body?: unknown) {
-  return fetch(`/api/invites/${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-}
-
 export default function InviteClient({ token, invite }: { token: string; invite: PublicInvite }) {
   const [state, setState] = useState<State>("idle");
   const [phone, setPhone] = useState("");
   const [consent, setConsent] = useState(false);
-  const t = encodeURIComponent(token);
+  const webCall = useWebCall(token, WEB_CALL_ENABLED, setState);
 
   // Runs only in a real browser, so link scanners don't count as "opened". The server dedupes repeats.
-  useEffect(() => {
-    post(`${t}/event`, { event: "opened" }).catch(() => {});
-  }, [t]);
+  useEffect(() => logEvent(token, "opened"), [token]);
 
-  // One Web Call SDK client per page. Loaded in the browser only; start() must run inside the click handler.
-  const callRef = useRef<BolnaWebCall | null>(null);
-  useEffect(() => {
-    if (!WEB_CALL_ENABLED) return;
-    let call: BolnaWebCall | null = null;
-    let cancelled = false;
-    import("@bolna/web-call").then(({ BolnaWebCall }) => {
-      if (cancelled) return;
-      call = new BolnaWebCall({ sessionUrl: `/api/invites/${t}/web-session` });
-      call.on("state-change", (s) => {
-        if (s === "connecting" || s === "ringing") setState("connecting");
-      });
-      call.on("call-start", () => {
-        setState("live");
-        post(`${t}/event`, { event: "web_connected", meta: { execution_id: call?.getRunId() } }).catch(() => {});
-      });
-      call.on("call-end", ({ reason }) => {
-        setState((prev) => (prev === "live" ? "ended" : prev));
-        post(`${t}/event`, { event: "call_ended_client", meta: { reason } }).catch(() => {});
-      });
-      call.on("error", (e) => {
-        if (e.code === "already_active") return;
-        if (e.code === "microphone_denied") {
-          post(`${t}/event`, { event: "mic_denied" }).catch(() => {});
-          return setState("mic_denied");
-        }
-        if (e.code === "at_capacity") return setState("busy");
-        setState("error"); // mint_failed, connect_failed, call_rejected, autoplay_blocked
-      });
-      callRef.current = call;
-    });
-    return () => {
-      cancelled = true;
-      call?.stop();
-    };
-  }, [t]);
-
-  function talkInBrowser() {
-    setState("connecting");
-    callRef.current?.start().catch(() => {}); // failures arrive through the "error" event
-  }
-
-  async function callMe() {
+  async function onCallMe() {
     setState("calling");
-    const res = await post(`${t}/call`, { phone_e164: phone.trim() || null, consent }).catch(() => null);
-    setState(stateForCallResponse(res?.status));
+    setState(await callMe(token, phone, consent));
   }
 
-  async function optOut() {
-    const res = await post(`${t}/optout`).catch(() => null);
-    setState(res?.ok ? "opted_out" : "error");
+  async function onOptOut() {
+    setState((await optOut(token)) ? "opted_out" : "error");
   }
 
   if (state === "opted_out") return <p>{STATUS_TEXT.opted_out}</p>;
@@ -143,9 +62,9 @@ export default function InviteClient({ token, invite }: { token: string; invite:
       {WEB_CALL_ENABLED && state !== "mic_denied" && (
         <p>
           {state === "live" || state === "connecting" ? (
-            <button onClick={() => callRef.current?.stop()}>End call</button>
+            <button onClick={webCall.stop}>End call</button>
           ) : (
-            <button onClick={talkInBrowser} disabled={state === "ended" || state === "ringing"}>
+            <button onClick={webCall.start} disabled={state === "ended" || state === "ringing"}>
               Talk in browser
             </button>
           )}
@@ -175,7 +94,7 @@ export default function InviteClient({ token, invite }: { token: string; invite:
         </label>
       </p>
       <p>
-        <button onClick={callMe} disabled={!consent || state === "calling" || state === "ringing" || state === "finished"}>
+        <button onClick={onCallMe} disabled={!consent || state === "calling" || state === "ringing" || state === "finished"}>
           Call me now
         </button>
       </p>
@@ -189,7 +108,7 @@ export default function InviteClient({ token, invite }: { token: string; invite:
       <hr />
       <p>
         <small>
-          <button onClick={optOut}>Opt out</button> · Questions, or want your data deleted? Just reply to the email.
+          <button onClick={onOptOut}>Opt out</button> · Questions, or want your data deleted? Just reply to the email.
         </small>
       </p>
     </main>

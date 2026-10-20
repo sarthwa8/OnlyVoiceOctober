@@ -1,0 +1,111 @@
+{
+  "by_company": {
+    "acme": {
+      "completed": 2,
+      "completed_by_channel": {
+        "phone": 1,
+        "web": 1
+      },
+      "invited": 3,
+      "opened": 3,
+      "opted_out": 1,
+      "started": 2,
+      "started_by_channel": {
+        "phone": 1,
+        "web": 1
+      }
+    },
+    "beta": {
+      "completed": 0,
+      "completed_by_channel": {},
+      "invited": 2,
+      "opened": 2,
+      "opted_out": 0,
+      "started": 1,
+      "started_by_channel": {
+        "phone": 1
+      }
+    }
+  },
+  "by_email_variant": {
+    "founder": {
+      "completed": 1,
+      "completed_by_channel": {
+        "phone": 1
+      },
+      "invited": 2,
+      "opened": 2,
+      "opted_out": 0,
+      "started": 1,
+      "started_by_channel": {
+        "phone": 1
+      }
+    },
+    "generic": {
+      "completed": 1,
+      "completed_by_channel": {
+        "web": 1
+      },
+      "invited": 2,
+      "opened": 2,
+      "opted_out": 0,
+      "started": 2,
+      "started_by_channel": {
+        "phone": 1,
+        "web": 1
+      }
+    },
+    "unknown": {
+      "completed": 0,
+      "completed_by_channel": {},
+      "invited": 1,
+      "opened": 1,
+      "opted_out": 1,
+      "started": 0,
+      "started_by_channel": {}
+    }
+  },
+  "by_incentive": {
+    "none": {
+      "completed": 0,
+      "completed_by_channel": {},
+      "invited": 2,
+      "opened": 2,
+      "opted_out": 0,
+      "started": 1,
+      "started_by_channel": {
+        "phone": 1
+      }
+    },
+    "yes": {
+      "completed": 2,
+      "completed_by_channel": {
+        "phone": 1,
+        "web": 1
+      },
+      "invited": 3,
+      "opened": 3,
+      "opted_out": 1,
+      "started": 2,
+      "started_by_channel": {
+        "phone": 1,
+        "web": 1
+      }
+    }
+  },
+  "overall": {
+    "completed": 2,
+    "completed_by_channel": {
+      "phone": 1,
+      "web": 1
+    },
+    "invited": 5,
+    "opened": 5,
+    "opted_out": 1,
+    "started": 3,
+    "started_by_channel": {
+      "phone": 2,
+      "web": 1
+    }
+  }
+}
