@@ -24,11 +24,15 @@ from pydantic import BaseModel
 
 from .bolna import BolnaClient
 from .guide import TRIGGERS, Company, Contact, prompt_variables, render_prompt
+from .webhook import CallRecord
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PHONE_RE = re.compile(r"^\+[1-9]\d{7,14}$")
 START_EVENTS = {"started_web": "web", "started_phone": "phone"}
 MAX_STARTS = 3
+MIN_USER_TURNS = 3  # a "completed" call only counts if the user actually talked
+# Bolna statuses that mean the call ended without a conversation.
+NOT_CONNECTED = {"no-answer", "busy", "failed", "canceled", "stopped", "error", "balance-low"}
 
 
 class Invite(BaseModel):
@@ -181,6 +185,40 @@ def mark_completed(token: str, execution_id: str, channel: str | None = None) ->
         return False
     log_event(token, "completed", {"execution_id": execution_id, "channel": channel or _channel_for(events, execution_id)})
     return True
+
+
+def _call_variables(payload: dict) -> dict:
+    """The user_data we sent, as echoed in the webhook. Its exact place isn't confirmed, so check both."""
+    ctx = payload.get("context_details") or payload.get("user_data") or {}
+    if not isinstance(ctx, dict):
+        return {}
+    nested = ctx.get("recipient_data")
+    return {**(nested if isinstance(nested, dict) else {}), **ctx}
+
+
+def record_call_outcome(payload: dict, record: CallRecord) -> str | None:
+    """Update the invite funnel from one Bolna webhook. Bolna posts on every status change, so this
+    ignores in-between statuses and is safe to run more than once for the same call."""
+    vars_ = _call_variables(payload)
+    token = vars_.get("invite_token") or token_for_execution(record.execution_id)
+    if not token or get_invite(token) is None:
+        return None
+    status = record.status.lower()
+    if status == "completed":
+        user_turns = sum(1 for t in record.turns if t.speaker == "user")
+        if user_turns >= MIN_USER_TURNS:
+            mark_completed(token, record.execution_id, channel=vars_.get("channel"))
+        else:
+            _log_once(token, "call_too_short", record.execution_id, {"user_turns": user_turns})
+    elif status in NOT_CONNECTED:
+        _log_once(token, "call_not_connected", record.execution_id, {"status": status})
+    return token
+
+
+def _log_once(token: str, event: str, execution_id: str, meta: dict) -> None:
+    if any(e["event"] == event and e.get("meta", {}).get("execution_id") == execution_id for e in events_for(token)):
+        return
+    log_event(token, event, {"execution_id": execution_id, **meta})
 
 
 def build_user_data(invite: Invite, channel: str) -> dict:
@@ -350,6 +388,27 @@ def post_optout(token: str) -> dict:
     if status_of(events_for(token)) != "opted_out":
         log_event(token, "opted_out")
     return {"ok": True}
+
+
+@router.post("/{token}/web-session")
+def post_web_session(token: str) -> dict:
+    """The Web Call SDK posts here when the user taps "Talk in browser". Any body it sends is ignored:
+    user_data comes from the invite, so nobody can change the prompt or pose as another invite.
+    Tapping after the on-page disclosure is the request; the agent repeats the disclosure first."""
+    invite = _require_startable(token)
+    try:
+        session = BolnaClient().mint_web_session(build_user_data(invite, "web"))
+    except httpx.HTTPStatusError as exc:
+        _append("errors.jsonl", {"token": token, "at": _now(), "where": "mint_web_session", "error": exc.response.text[:500]})
+        # Pass Bolna's status through (e.g. 429 at capacity) so the SDK reports the right error code.
+        raise HTTPException(status_code=exc.response.status_code, detail="couldn't start the browser call") from None
+    except httpx.HTTPError as exc:
+        _append("errors.jsonl", {"token": token, "at": _now(), "where": "mint_web_session", "error": repr(exc)})
+        raise HTTPException(status_code=502, detail="couldn't start the browser call") from None
+
+    run_id = session.get("execution_id") or session.get("run_id") if isinstance(session, dict) else None
+    log_event(token, "started_web", {"execution_id": run_id} if run_id else {})
+    return session  # unchanged: the SDK knows its shape
 
 
 @router.post("/{token}/call")

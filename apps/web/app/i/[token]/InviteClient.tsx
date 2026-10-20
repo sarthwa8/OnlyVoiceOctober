@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { BolnaWebCall } from "@bolna/web-call";
+
+const WEB_CALL_ENABLED = process.env.NEXT_PUBLIC_WEB_CALL_ENABLED === "true";
 
 export type PublicInvite = {
   first_name: string;
@@ -12,10 +15,27 @@ export type PublicInvite = {
   status: string;
 };
 
-type State = "idle" | "calling" | "ringing" | "bad_phone" | "finished" | "opted_out" | "error";
+type State =
+  | "idle"
+  | "connecting"
+  | "live"
+  | "ended"
+  | "mic_denied"
+  | "busy"
+  | "calling"
+  | "ringing"
+  | "bad_phone"
+  | "finished"
+  | "opted_out"
+  | "error";
 
 const STATUS_TEXT: Record<State, string> = {
   idle: "",
+  connecting: "Connecting…",
+  live: "You're live. Talk whenever you're ready.",
+  ended: "Thank you!",
+  mic_denied: "We couldn't use your microphone. No problem, we'll call you instead. Enter your number below.",
+  busy: "Lots of people right now. Tap \"Call me now\" below instead.",
   calling: "Starting the call…",
   ringing: "Your phone will ring in a few seconds.",
   bad_phone: "Please enter your number with the country code, e.g. +91 98000 00000 or +1 415 555 0100.",
@@ -51,6 +71,48 @@ export default function InviteClient({ token, invite }: { token: string; invite:
     post(`${t}/event`, { event: "opened" }).catch(() => {});
   }, [t]);
 
+  // One Web Call SDK client per page. Loaded in the browser only; start() must run inside the click handler.
+  const callRef = useRef<BolnaWebCall | null>(null);
+  useEffect(() => {
+    if (!WEB_CALL_ENABLED) return;
+    let call: BolnaWebCall | null = null;
+    let cancelled = false;
+    import("@bolna/web-call").then(({ BolnaWebCall }) => {
+      if (cancelled) return;
+      call = new BolnaWebCall({ sessionUrl: `/api/invites/${t}/web-session` });
+      call.on("state-change", (s) => {
+        if (s === "connecting" || s === "ringing") setState("connecting");
+      });
+      call.on("call-start", () => {
+        setState("live");
+        post(`${t}/event`, { event: "web_connected", meta: { execution_id: call?.getRunId() } }).catch(() => {});
+      });
+      call.on("call-end", ({ reason }) => {
+        setState((prev) => (prev === "live" ? "ended" : prev));
+        post(`${t}/event`, { event: "call_ended_client", meta: { reason } }).catch(() => {});
+      });
+      call.on("error", (e) => {
+        if (e.code === "already_active") return;
+        if (e.code === "microphone_denied") {
+          post(`${t}/event`, { event: "mic_denied" }).catch(() => {});
+          return setState("mic_denied");
+        }
+        if (e.code === "at_capacity") return setState("busy");
+        setState("error"); // mint_failed, connect_failed, call_rejected, autoplay_blocked
+      });
+      callRef.current = call;
+    });
+    return () => {
+      cancelled = true;
+      call?.stop();
+    };
+  }, [t]);
+
+  function talkInBrowser() {
+    setState("connecting");
+    callRef.current?.start().catch(() => {}); // failures arrive through the "error" event
+  }
+
   async function callMe() {
     setState("calling");
     const res = await post(`${t}/call`, { phone_e164: phone.trim() || null, consent }).catch(() => null);
@@ -78,9 +140,19 @@ export default function InviteClient({ token, invite }: { token: string; invite:
         time.
       </p>
 
-      {/* "Talk in browser" (Bolna Web Call SDK) is added in Step 6, behind NEXT_PUBLIC_WEB_CALL_ENABLED. */}
+      {WEB_CALL_ENABLED && state !== "mic_denied" && (
+        <p>
+          {state === "live" || state === "connecting" ? (
+            <button onClick={() => callRef.current?.stop()}>End call</button>
+          ) : (
+            <button onClick={talkInBrowser} disabled={state === "ended" || state === "ringing"}>
+              Talk in browser
+            </button>
+          )}
+        </p>
+      )}
 
-      <h2>We&apos;ll call you</h2>
+      <h2>{WEB_CALL_ENABLED ? "Or we'll call you" : "We'll call you"}</h2>
       <p>
         <input
           type="tel"
@@ -108,7 +180,11 @@ export default function InviteClient({ token, invite }: { token: string; invite:
         </button>
       </p>
 
-      {state !== "idle" && <p role="status">{STATUS_TEXT[state]}</p>}
+      {state !== "idle" && (
+        <p role="status">
+          {state === "ended" && invite.incentive ? `Thank you! ${invite.incentive} is on its way.` : STATUS_TEXT[state]}
+        </p>
+      )}
 
       <hr />
       <p>
