@@ -128,3 +128,84 @@ def test_main_app_mounts_invite_routes(monkeypatch, tmp_path):
 
     paths = set(app.openapi()["paths"])
     assert {"/invites/funnel", "/invites/{token}", "/invites/{token}/event", "/invites/{token}/optout"} <= paths
+
+
+class FakeBolna:
+    """Stands in for BolnaClient: records calls instead of dialing anyone."""
+
+    calls: list = []
+    fail_with: Exception | None = None
+
+    def start_outbound_call(self, phone_e164, user_data, timeout=15.0):
+        if FakeBolna.fail_with:
+            raise FakeBolna.fail_with
+        FakeBolna.calls.append({"phone": phone_e164, "user_data": user_data})
+        return {"message": "done", "status": "queued", "execution_id": f"exec_{len(FakeBolna.calls)}"}
+
+
+@pytest.fixture
+def bolna(monkeypatch):
+    FakeBolna.calls, FakeBolna.fail_with = [], None
+    monkeypatch.setattr(invites, "BolnaClient", FakeBolna)
+    return FakeBolna
+
+
+def test_build_user_data_fills_every_bolna_placeholder_and_per_invite_incentive():
+    import re
+
+    inv = invites.create_invite("acme", ASHA)
+    data = invites.build_user_data(inv, "phone")
+    assert data["invite_token"] == inv.token and data["channel"] == "phone"
+    assert "$5 voucher" in data["incentive_line"]  # CSV incentive overrides the company default (none)
+    sys.path.insert(0, str(ROOT / "agents"))
+    import sync  # the exact prompt + welcome message pushed to the Bolna agent
+
+    payload = sync.build_payload()
+    bolna_text = payload["agent_prompts"]["task_1"]["system_prompt"] + payload["agent_config"]["agent_welcome_message"]
+    placeholders = set(re.findall(r"\{\{([a-z_]+)\}\}", bolna_text))
+    assert placeholders and placeholders <= set(data)  # Bolna gets a value for every {{placeholder}}
+    assert "{contact_name}" not in data["system_prompt"] and "Asha Rao" in data["system_prompt"]
+
+
+def test_call_requires_consent_and_valid_phone(client, bolna):
+    inv = invites.create_invite("acme", BEN)  # no phone in the CSV
+    assert client.post(f"/invites/{inv.token}/call", json={"consent": False, "phone_e164": "+14155550100"}).status_code == 400
+    assert client.post(f"/invites/{inv.token}/call", json={"phone_e164": "+14155550100"}).status_code == 400
+    assert client.post(f"/invites/{inv.token}/call", json={"consent": True}).status_code == 422
+    assert client.post(f"/invites/{inv.token}/call", json={"consent": True, "phone_e164": "98000"}).status_code == 422
+    assert bolna.calls == [] and invites.events_for(inv.token) == []
+    assert client.post("/invites/nope/call", json={"consent": True}).status_code == 404
+
+
+def test_call_uses_typed_or_csv_phone_and_logs_execution_id(client, bolna):
+    inv = invites.create_invite("acme", ASHA)
+    assert client.post(f"/invites/{inv.token}/call", json={"consent": True}).json() == {"ok": True}
+    assert client.post(f"/invites/{inv.token}/call",
+                       json={"consent": True, "phone_e164": "+1 (415) 555-0100"}).status_code == 200
+    assert [c["phone"] for c in bolna.calls] == ["+919800000123", "+14155550100"]
+    assert bolna.calls[0]["user_data"]["invite_token"] == inv.token
+    starts = [e for e in invites.events_for(inv.token) if e["event"] == "started_phone"]
+    assert [e["meta"]["execution_id"] for e in starts] == ["exec_1", "exec_2"]
+    assert invites.token_for_execution("exec_2") == inv.token
+
+
+def test_call_limits_and_finished_invites(client, bolna):
+    inv = invites.create_invite("acme", ASHA)
+    for _ in range(3):
+        assert client.post(f"/invites/{inv.token}/call", json={"consent": True}).status_code == 200
+    assert client.post(f"/invites/{inv.token}/call", json={"consent": True}).status_code == 429
+    done = invites.create_invite("acme", ASHA)
+    invites.log_event(done.token, "opted_out")
+    assert client.post(f"/invites/{done.token}/call", json={"consent": True}).status_code == 409
+    assert len(bolna.calls) == 3
+
+
+def test_bolna_failure_returns_502_and_logs(client, bolna, data_dir):
+    import httpx
+
+    inv = invites.create_invite("acme", ASHA)
+    req = httpx.Request("POST", "https://api.bolna.ai/call")
+    bolna.fail_with = httpx.HTTPStatusError("bad", request=req, response=httpx.Response(400, text="no number", request=req))
+    assert client.post(f"/invites/{inv.token}/call", json={"consent": True}).status_code == 502
+    assert "no number" in (data_dir / "errors.jsonl").read_text()
+    assert invites.events_for(inv.token) == []  # a failed start doesn't count toward the funnel or the limit

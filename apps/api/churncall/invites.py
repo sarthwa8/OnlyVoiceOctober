@@ -18,10 +18,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from .guide import TRIGGERS, Company, Contact
+from .bolna import BolnaClient
+from .guide import TRIGGERS, Company, Contact, prompt_variables, render_prompt
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PHONE_RE = re.compile(r"^\+[1-9]\d{7,14}$")
@@ -181,6 +183,20 @@ def mark_completed(token: str, execution_id: str, channel: str | None = None) ->
     return True
 
 
+def build_user_data(invite: Invite, channel: str) -> dict:
+    """Per-call variables for Bolna. Built on the server from the invite only, never from browser input."""
+    company = load_company(invite.company_slug)
+    if invite.incentive:  # a per-user incentive (A/B test) overrides the company default
+        company = company.model_copy(update={"incentive": invite.incentive})
+    return {
+        **prompt_variables(company, invite.contact),
+        "invite_token": invite.token,
+        "channel": channel,
+        # Fallback in case Bolna lets user_data override the agent prompt; harmless if it doesn't [verify].
+        "system_prompt": render_prompt(company, invite.contact),
+    }
+
+
 # ---------- funnel ----------
 
 STAGES = ["invited", "opened", "started", "completed", "opted_out"]
@@ -267,6 +283,11 @@ class PublicInvite(BaseModel):
     status: str
 
 
+class CallIn(BaseModel):
+    phone_e164: str | None = None
+    consent: bool = False
+
+
 class EventIn(BaseModel):
     event: Literal["opened", "web_connected", "mic_denied", "call_ended_client"]
     meta: dict = {}
@@ -276,6 +297,17 @@ def _require(token: str) -> Invite:
     invite = get_invite(token)
     if invite is None:
         raise HTTPException(status_code=404, detail="unknown invite")
+    return invite
+
+
+def _require_startable(token: str) -> Invite:
+    """An invite can start at most MAX_STARTS calls, and none once completed or opted out."""
+    invite = _require(token)
+    events = events_for(token)
+    if status_of(events) in ("completed", "opted_out"):
+        raise HTTPException(status_code=409, detail="this invite is already finished")
+    if starts_count(events) >= MAX_STARTS:
+        raise HTTPException(status_code=429, detail="too many attempts for this invite")
     return invite
 
 
@@ -317,4 +349,27 @@ def post_optout(token: str) -> dict:
     _require(token)
     if status_of(events_for(token)) != "opted_out":
         log_event(token, "opted_out")
+    return {"ok": True}
+
+
+@router.post("/{token}/call")
+def post_call(token: str, body: CallIn) -> dict:
+    """User tapped "Call me now" with the consent box ticked. Their tap is the consent; we refuse without it."""
+    invite = _require_startable(token)
+    if body.consent is not True:
+        raise HTTPException(status_code=400, detail="consent required: the user must request the call")
+    phone = re.sub(r"[\s\-().]", "", body.phone_e164 or "") or invite.phone_e164 or ""
+    if not PHONE_RE.match(phone):
+        raise HTTPException(status_code=422, detail="phone number must include the country code, e.g. +919800000000")
+
+    try:
+        result = BolnaClient().start_outbound_call(phone, user_data=build_user_data(invite, "phone"))
+    except httpx.HTTPError as exc:
+        detail = exc.response.text[:500] if isinstance(exc, httpx.HTTPStatusError) else repr(exc)
+        _append("errors.jsonl", {"token": token, "at": _now(), "where": "start_outbound_call", "error": detail})
+        raise HTTPException(status_code=502, detail="couldn't start the call") from None
+
+    execution_id = result.get("execution_id")
+    log_event(token, "started_phone", {"execution_id": execution_id})
+    _append("calls.jsonl", {"token": token, "at": _now(), "channel": "phone", "bolna": result})
     return {"ok": True}

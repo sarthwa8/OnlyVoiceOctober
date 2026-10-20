@@ -12,14 +12,25 @@ export type PublicInvite = {
   status: string;
 };
 
-type State = "idle" | "ringing" | "opted_out" | "error";
+type State = "idle" | "calling" | "ringing" | "bad_phone" | "finished" | "opted_out" | "error";
 
 const STATUS_TEXT: Record<State, string> = {
   idle: "",
+  calling: "Starting the call…",
   ringing: "Your phone will ring in a few seconds.",
+  bad_phone: "Please enter your number with the country code, e.g. +91 98000 00000 or +1 415 555 0100.",
+  finished: "This link has already been used. Reply to the email if you'd still like to talk.",
   opted_out: "Got it. You won't hear from us about this again.",
   error: "Something went wrong. Reply to the email and we'll sort it out.",
 };
+
+// How the API's answer to "Call me now" maps to what the user sees.
+function stateForCallResponse(status: number | undefined): State {
+  if (status === 200) return "ringing";
+  if (status === 422) return "bad_phone";
+  if (status === 409 || status === 429) return "finished";
+  return "error";
+}
 
 function post(path: string, body?: unknown) {
   return fetch(`/api/invites/${path}`, {
@@ -41,8 +52,9 @@ export default function InviteClient({ token, invite }: { token: string; invite:
   }, [t]);
 
   async function callMe() {
+    setState("calling");
     const res = await post(`${t}/call`, { phone_e164: phone.trim() || null, consent }).catch(() => null);
-    setState(res?.ok ? "ringing" : "error");
+    setState(stateForCallResponse(res?.status));
   }
 
   async function optOut() {
@@ -91,7 +103,7 @@ export default function InviteClient({ token, invite }: { token: string; invite:
         </label>
       </p>
       <p>
-        <button onClick={callMe} disabled={!consent || state === "ringing"}>
+        <button onClick={callMe} disabled={!consent || state === "calling" || state === "ringing" || state === "finished"}>
           Call me now
         </button>
       </p>

@@ -41,8 +41,8 @@ class Contact(BaseModel):
     usage_facts: list[str] = Field(default_factory=list)
 
 
-def render_prompt(company: Company, contact: Contact, template: str | None = None) -> str:
-    template = template if template is not None else PROMPT_PATH.read_text()
+def prompt_variables(company: Company, contact: Contact) -> dict[str, str]:
+    """Values for the prompt's placeholders. Bolna fills its {{name}} copy of the prompt from these via user_data."""
     long_trigger, short_trigger = TRIGGERS.get(contact.trigger, TRIGGERS["cancelled"])
     goals = "\n".join(f"{i}. {g}" for i, g in enumerate(company.research_goals, 1))
     offer_rule = (
@@ -66,7 +66,12 @@ def render_prompt(company: Company, contact: Contact, template: str | None = Non
         "usage_facts": "; ".join(contact.usage_facts) or "none provided",
         "incentive_line": incentive_line,
     }
+    return {key: str(val) for key, val in values.items()}
+
+
+def render_prompt(company: Company, contact: Contact, template: str | None = None) -> str:
+    template = template if template is not None else PROMPT_PATH.read_text()
     out = template
-    for key, val in values.items():
-        out = out.replace("{" + key + "}", str(val))
+    for key, val in prompt_variables(company, contact).items():
+        out = out.replace("{" + key + "}", val)
     return out
