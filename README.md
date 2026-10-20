@@ -117,6 +117,7 @@ cd apps/web && npm run lint && npx tsc --noEmit && npm run build
 | [build-plans/00-sarthaks-plan.md](build-plans/00-sarthaks-plan.md) | Sarthak's plan: the pilot to Oct 30 (with notes on what's already built) · pilot numbers in [docs/pilot-log.md](docs/pilot-log.md) |
 | [build-plans/](build-plans/) | One plan per feature, with steps and checks |
 | [docs/research/](docs/research/) | Evidence base and the Koji / Perspective AI teardown |
+| [docs/suggested-improvements.md](docs/suggested-improvements.md) | Analysis of the first real interview and the prioritised improvement list |
 | [docs/HANDOFF_2026-10-20.md](docs/HANDOFF_2026-10-20.md) · [docs/BOLNA_QUESTIONS.md](docs/BOLNA_QUESTIONS.md) | Latest handoff between us; open questions for Bolna |
 | [apps/api/](apps/api/README.md) · [apps/web/](apps/web/) | The API and the invite page |
 | [agents/](agents/) · [eval/](eval/) · [scripts/](scripts/) | Bolna agent, interview simulator, invite generator |
