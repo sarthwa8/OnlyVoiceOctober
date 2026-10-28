@@ -31,11 +31,11 @@ flowchart LR
 
 1. **Invite.** Each churned user gets a private link, sent in an email from the founder.
 2. **Consent first.** The page says up front that this is an AI and that the conversation is recorded. The user chooses to talk in the browser or ticks a box asking to be called. **We never cold-call**, and the server refuses to dial without that consent.
-3. **Interview.** A 3–4 minute conversation built on jobs-to-be-done (what they hired the product to do): the story of signing up, the moment it broke, what they use now, what would bring them back. At least two follow-ups on the main reason, and it never suggests an answer.
+3. **Interview.** A ~3 minute conversation built on jobs-to-be-done (what they hired the product to do): the story of signing up, the moment it broke, what they use now, what would bring them back. At least two follow-ups on the main reason, and it never suggests an answer.
 4. **Evidence.** Each call becomes a structured record. **Every quote is checked word for word against the transcript;** anything the model invents is dropped.
 5. **Funnel.** Unique users at each stage, split by channel, incentive and email variant. That's how we measure whether churned users will actually talk.
 
-## Status (Oct 20, 2026, evening)
+## Status (Oct 28, 2026)
 
 | | |
 |---|---|
@@ -44,7 +44,9 @@ flowchart LR
 | ✅ Evidence | Structured extraction with verified quotes, on Claude or any free OpenAI-compatible model |
 | ✅ Architecture | Layered API with safety fixes and regression snapshots ([build plan 02](build-plans/02-api-architecture-cleanup.md)) |
 | ✅ Results | Password-protected `/results`: funnel, reasons with verified quotes, every call's transcript and insight ([build plan 03](build-plans/03-results-page.md)) |
-| ⏳ Next | First real test interview, then the 2-startup pilot, then the cancel-flow demo |
+| ✅ First real interview | Oct 20, browser call, end to end. Its weaknesses (AI talked 71% of the words, double questions) drove interviewer prompt v2 |
+| ✅ Quality checks | `eval/interviews/quality.py` scores any transcript (talk ratio, words per turn, double/leading questions) and runs in tests |
+| ⏳ Next | Test call on prompt v2, the pilot, then submission ([submission kit](docs/SUBMISSION.md)) |
 | 🎯 Pilot | Will churned users actually talk to an AI? A small private pilot (2 startups, 10+ interviews), measured on `/results`: see [Sarthak's plan](build-plans/00-sarthaks-plan.md) |
 
 ---
