@@ -23,7 +23,9 @@ CSV of churned users → `scripts/make_invites.py` → private links → user op
 - Webhooks fire on **every status change**; only `status == "completed"` has the full transcript and recording.
 - `POST /call` returns `execution_id`. Browser sessions are minted with `POST /web-call/freeswitch-session` (per `@bolna/web-call` 3.0.1), and the response includes `run_id`.
 - Webhook source IPs: 13.203.39.153, 13.126.9.249, 13.202.133.53.
-- Our account (2026-10-20): web calls enabled, max 2 concurrent calls, no phone numbers listed (outbound untested).
+- Our account (2026-10-20): web calls enabled, max 2 concurrent calls, no phone numbers listed. Outbound fails on the trial account ("Trial accounts can only make calls to verified phone numbers").
+- From the first real browser call (2026-10-20): `user_data` comes back as `context_details.recipient_data`; `telephony_data.provider == "web-call"` and `call_type == "outbound"` even for browser calls; `telephony_data.recording_url` 307-redirects to a signed S3 FLAC; payloads also carry `latency_data`, `cost_breakdown`, `usage_breakdown`, `interruption_stats`. A 2.7-min call cost `total_cost` 16.5 (unit unconfirmed, probably US cents), 84% of it the ElevenLabs voice.
+- Interview quality is checked with `eval/interviews/quality.py` (talk ratio, words per turn, double/leading questions, ignoring "end the call"). The first real call is the "before" fixture in `apps/api/tests/fixtures/`.
 
 ## Rules
 - Users always start the conversation (tap in the browser or ask for a call). Never cold-call. The server refuses calls without consent.
