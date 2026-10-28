@@ -352,6 +352,7 @@ Each phase lists **what to build**, **how it works**, **how to check it**, and *
 | Webhook writes `webhooks.jsonl` (raw payloads) and tags `errors.jsonl` rows with `step` | 0 | Anyone reading the data files | C2 |
 | `/healthz` adds `missing_for_calls` | 1 | Nobody (additive) | S4 |
 | `CallRecord.status` is lowercased when parsed; web session reads only `run_id`; extraction's company context uses `bolna.call_variables()` (also reads `recipient_data`) | 2 | Nobody in practice (Bolna sends lowercase statuses; the SDK's session type defines `run_id`) | S3 |
+| `user_data_{phone,web}.json` snapshots regenerated: only `system_prompt` changed (interviewer prompt v2: ≤20-word turns, one question, no framing, stop when asked) | after 4 (2026-10-28, Sarthak) | Nobody (prompt text only; same keys) | First real interview, `docs/suggested-improvements.md` §2.1–2.2 |
 
 ---
 

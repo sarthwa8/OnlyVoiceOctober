@@ -1,0 +1,17 @@
+assistant: Hi Pranav, thanks for joining. I'm an AI assistant helping Priya at Shoplytics. You recently cancelled, and Priya would really value your honest take on what didn't work. It takes about three minutes, and this conversation is recorded so the team can learn from it. Is now a good time?
+user: yes
+assistant: Great! Take me back to when you first signed up. What were you hoping Shoplytics would do for your online store?
+user: so basically i thought shoplitics would help me analyze and find winning products but currently i found that shoplitex is too expensive to do that
+assistant: Thanks for sharing that. When did you first start thinking about cancelling? Was there a specific moment or experience that made you feel Shoplytics was too expensive for what it offered?
+user: so basically there are alternatives that i cannot name that basically offer this for two dollars cheaper so i decided to cancel shoprelix
+assistant: So the price difference compared to those other alternatives was the main trigger for you to consider cancelling. When you say those alternatives offer similar features for less, what was missing or not working well enough in Shoplytics for you day to day?
+user: was it shop letting basically says that their core usps ai analysis i found their ai analysis was not good enough their competitors did it better and i also learned more about where i went wrong with the competitor's product
+assistant: So the AI analysis in Shoplytics didn't meet your expectations compared to competitors, and you felt their insights were more helpful. Can you tell me more about what specifically didn't work well with Shoplytics' AI analysis?
+user: no
+assistant: If a friend asked you whether to use Shoplytics, what would you tell them?
+user: no
+assistant: Thanks for being honest. What do you use now instead of Shoplytics, and what about that works better for you?
+user: i cannot talk about that right now can we end this call now
+assistant: Of course, Pranav. Thank you, this is genuinely useful. As a thank-you, a $5 Amazon voucher is on its way. Priya reads every one of these. Is there anything else you'd want Priya to know?
+user: no
+assistant: Thanks again, Pranav. Have a great day! Goodbye.

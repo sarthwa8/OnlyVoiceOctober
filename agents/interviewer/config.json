@@ -1,5 +1,5 @@
 {
-  "_comment": "Bolna agent settings for the ChurnCall interviewer, in Bolna's POST /v2/agent schema (checked against the docs on 2026-10-20). agents/sync.py adds the welcome message and system prompt from prompt.md. Voice = ElevenLabs 'Chris - Friendly conversational guide'; swap voice/voice_id from Bolna's voice list if you want a different one.",
+  "_comment": "Bolna agent settings for the ChurnCall interviewer, in Bolna's POST /v2/agent schema (checked against the docs on 2026-10-20). agents/sync.py adds the welcome message and system prompt from prompt.md. Voice = ElevenLabs 'Chris - Friendly conversational guide'; swap voice/voice_id from Bolna's voice list if you want a different one. 2026-10-28: max_tokens 150->60 (backstop for short turns) and endpointing 900->700 ms (saves ~200 ms per reply) after the first real interview; listen for cut-offs and go back to 800-900 if people get interrupted.",
   "agent_name": "churncall-interviewer-v1",
   "agent_type": "other",
   "tasks": [
@@ -10,7 +10,7 @@
         "llm_agent": {
           "agent_type": "simple_llm_agent",
           "agent_flow_type": "streaming",
-          "llm_config": {"provider": "openai", "model": "gpt-4.1-mini", "max_tokens": 150, "temperature": 0.3}
+          "llm_config": {"provider": "openai", "model": "gpt-4.1-mini", "max_tokens": 60, "temperature": 0.3}
         },
         "synthesizer": {
           "provider": "elevenlabs",
@@ -26,7 +26,7 @@
           "stream": true,
           "encoding": "linear16",
           "sampling_rate": 16000,
-          "endpointing": 900
+          "endpointing": 700
         },
         "input": {"provider": "plivo", "format": "wav"},
         "output": {"provider": "plivo", "format": "wav"}
